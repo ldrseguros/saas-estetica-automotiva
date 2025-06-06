@@ -210,7 +210,7 @@ const SidebarContent: React.FC<{
         <div className="flex-shrink-0 flex border-t border-gray-200 p-4">
           <div className="flex-shrink-0 w-full group block">
             <div className="flex items-center">
-              <div className="inline-block h-9 w-9 rounded-full bg-brand-red text-white flex items-center justify-center">
+              <div className="h-9 w-9 rounded-full bg-brand-red text-white flex items-center justify-center">
                 <UserCircle className="h-5 w-5" />
               </div>
               <div className="ml-3 flex-1">

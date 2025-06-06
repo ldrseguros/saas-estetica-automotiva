@@ -63,7 +63,7 @@ router.get("/", getPublicServices); // GET /api/services
 router.post(
   "/admin/upload",
   protect,
-  authorizeRoles("ADMIN"),
+  authorizeRoles("TENANT_ADMIN", "SUPER_ADMIN"),
   upload.single("image"),
   (req, res) => {
     try {
@@ -89,13 +89,13 @@ router.post(
 // Admin routes - require authentication and ADMIN role
 router
   .route("/admin")
-  .all(protect, authorizeRoles("ADMIN")) // Apply middleware to all methods on this path
+  .all(protect, authorizeRoles("TENANT_ADMIN", "SUPER_ADMIN")) // Apply middleware to all methods on this path
   .get(getAllServices) // GET /api/services/admin
   .post(createService); // POST /api/services/admin
 
 router
   .route("/admin/:id")
-  .all(protect, authorizeRoles("ADMIN")) // Apply middleware to all methods on this path
+  .all(protect, authorizeRoles("TENANT_ADMIN", "SUPER_ADMIN")) // Apply middleware to all methods on this path
   .get(getServiceById) // GET /api/services/admin/:id
   .put(updateService) // PUT /api/services/admin/:id
   .delete(deleteService); // DELETE /api/services/admin/:id

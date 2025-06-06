@@ -259,7 +259,7 @@ router.post(
       if (!customerId) {
         return res.status(400).json({
           message:
-            "Este tenant ainda não possui uma assinatura ativa no Stripe",
+            "Portal de pagamento não disponível. Este tenant está em período de teste ou não possui assinatura ativa.",
         });
       }
 

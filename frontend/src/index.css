@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -80,31 +79,31 @@
   .service-card {
     @apply flex flex-col rounded-lg overflow-hidden bg-card transition-all duration-300 hover:shadow-md hover:shadow-brand-red/20;
   }
-  
+
   .service-image-container {
     @apply relative w-full h-48 overflow-hidden bg-black/20;
   }
-  
+
   .service-image {
     @apply w-full h-full object-cover transition-transform duration-300;
   }
-  
+
   .service-card:hover .service-image {
     @apply scale-105;
   }
-  
+
   .step-circle {
     @apply flex items-center justify-center rounded-full w-8 h-8 bg-secondary text-secondary-foreground font-semibold shrink-0;
   }
-  
+
   .step-circle.active {
     @apply bg-brand-red text-white;
   }
-  
+
   .step-connector {
     @apply h-0.5 bg-secondary flex-grow mx-2;
   }
-  
+
   .step-connector.active {
     @apply bg-brand-red;
   }

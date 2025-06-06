@@ -8,7 +8,7 @@ const router = express.Router();
 // Admin-only route for dashboard statistics
 router
   .route("/stats")
-  .all(protect, authorizeRoles("ADMIN"))
+  .all(protect, authorizeRoles("TENANT_ADMIN", "SUPER_ADMIN"))
   .get(getDashboardStats);
 
 export default router;
