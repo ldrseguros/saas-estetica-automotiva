@@ -59,7 +59,12 @@ export const authenticateUser = async (credentials) => {
   }
 
   const token = jwt.sign(
-    { id: account.id, email: account.email, role: account.role },
+    {
+      id: account.id,
+      email: account.email,
+      role: account.role,
+      tenantId: account.tenantId,
+    },
     JWT_SECRET,
     { expiresIn: "1h" }
   );
@@ -85,7 +90,7 @@ export const authenticateUser = async (credentials) => {
 export const registerNewEmployee = async (employeeData) => {
   const { email, password, name, role } = employeeData;
 
-  if (!["ADMIN", "USER"].includes(role)) {
+  if (!["TENANT_ADMIN", "EMPLOYEE"].includes(role)) {
     const error = new Error("Role inválido.");
     error.statusCode = 400; // Bad Request
     throw error;

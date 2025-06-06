@@ -12,7 +12,7 @@ const router = express.Router();
 
 // Apply protect and authorizeRoles middleware to all routes in this file
 router.use(protect);
-router.use(authorizeRoles("ADMIN"));
+router.use(authorizeRoles("TENANT_ADMIN", "SUPER_ADMIN"));
 
 // Define routes for user management
 router.route("/").get(getAllUsers); // GET /api/admin/users

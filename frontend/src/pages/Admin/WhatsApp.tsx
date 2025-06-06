@@ -6,6 +6,7 @@ import SendMessageTab from "@/components/Admin/WhatsApp/SendMessageTab";
 import ReportsTab from "@/components/Admin/WhatsApp/ReportsTab";
 import { toast } from "sonner";
 import API from "@/utils/apiService";
+import AdminLayout from "@/components/Admin/AdminLayout";
 
 interface Template {
   id: string;
@@ -185,56 +186,58 @@ const WhatsAppPage: React.FC = () => {
   };
 
   return (
-    <div className="container py-8">
-      <h1 className="text-3xl font-bold mb-6">WhatsApp Business</h1>
+    <AdminLayout>
+      <div className="container py-8">
+        <h1 className="text-3xl font-bold mb-6">WhatsApp Business</h1>
 
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
-        </div>
-      )}
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            {error}
+          </div>
+        )}
 
-      <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="mb-6">
-          <TabsTrigger value="templates" className="flex items-center gap-2">
-            <Settings size={18} /> Templates
-          </TabsTrigger>
-          <TabsTrigger value="send" className="flex items-center gap-2">
-            <MessageSquare size={18} /> Enviar Mensagem
-          </TabsTrigger>
-          <TabsTrigger value="reports" className="flex items-center gap-2">
-            <Image size={18} /> Relatórios
-          </TabsTrigger>
-        </TabsList>
+        <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="mb-6">
+            <TabsTrigger value="templates" className="flex items-center gap-2">
+              <Settings size={18} /> Templates
+            </TabsTrigger>
+            <TabsTrigger value="send" className="flex items-center gap-2">
+              <MessageSquare size={18} /> Enviar Mensagem
+            </TabsTrigger>
+            <TabsTrigger value="reports" className="flex items-center gap-2">
+              <Image size={18} /> Relatórios
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="templates">
-          <TemplatesTab
-            templates={templates}
-            onCreateTemplate={handleCreateTemplate}
-            onUpdateTemplate={handleUpdateTemplate}
-            onDeleteTemplate={handleDeleteTemplate}
-            isLoading={isLoading}
-          />
-        </TabsContent>
+          <TabsContent value="templates">
+            <TemplatesTab
+              templates={templates}
+              onCreateTemplate={handleCreateTemplate}
+              onUpdateTemplate={handleUpdateTemplate}
+              onDeleteTemplate={handleDeleteTemplate}
+              isLoading={isLoading}
+            />
+          </TabsContent>
 
-        <TabsContent value="send">
-          <SendMessageTab
-            clients={clients}
-            templates={templates}
-            onSendMessage={handleSendMessage}
-            isLoading={isLoading}
-          />
-        </TabsContent>
+          <TabsContent value="send">
+            <SendMessageTab
+              clients={clients}
+              templates={templates}
+              onSendMessage={handleSendMessage}
+              isLoading={isLoading}
+            />
+          </TabsContent>
 
-        <TabsContent value="reports">
-          <ReportsTab
-            onCreateReport={handleCreateReport}
-            onUploadPhoto={handleUploadPhoto}
-            isLoading={isLoading}
-          />
-        </TabsContent>
-      </Tabs>
-    </div>
+          <TabsContent value="reports">
+            <ReportsTab
+              onCreateReport={handleCreateReport}
+              onUploadPhoto={handleUploadPhoto}
+              isLoading={isLoading}
+            />
+          </TabsContent>
+        </Tabs>
+      </div>
+    </AdminLayout>
   );
 };
 

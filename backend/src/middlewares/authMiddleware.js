@@ -59,6 +59,7 @@ export const protect = async (req, res, next) => {
       email: account.email,
       name,
       role: account.role,
+      tenantId: account.tenantId, // Incluir tenantId se disponível
     };
 
     next(); // Proceed to the next middleware or route handler
@@ -84,7 +85,10 @@ export const protect = async (req, res, next) => {
 
 // Middleware para verificar se o usuário é um administrador
 export const admin = (req, res, next) => {
-  if (req.user && req.user.role === "ADMIN") {
+  if (
+    req.user &&
+    (req.user.role === "TENANT_ADMIN" || req.user.role === "SUPER_ADMIN")
+  ) {
     next();
   } else {
     res.status(403).json({

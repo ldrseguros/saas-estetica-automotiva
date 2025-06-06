@@ -4,8 +4,8 @@ import { useAuth } from "@/hooks/useAuth";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: "ADMIN" | "USER" | "CLIENT";
-  allowedRoles?: ("ADMIN" | "USER" | "CLIENT")[];
+  requiredRole?: "SUPER_ADMIN" | "TENANT_ADMIN" | "EMPLOYEE" | "CLIENT";
+  allowedRoles?: ("SUPER_ADMIN" | "TENANT_ADMIN" | "EMPLOYEE" | "CLIENT")[];
   fallbackPath?: string;
 }
 

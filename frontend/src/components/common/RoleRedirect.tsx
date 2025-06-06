@@ -25,9 +25,10 @@ const RoleRedirect: React.FC<RoleRedirectProps> = ({ defaultPath = "/" }) => {
 
   // Redirecionar baseado no role
   switch (user.role) {
-    case "ADMIN":
+    case "TENANT_ADMIN":
+    case "SUPER_ADMIN":
       return <Navigate to="/admin/dashboard" replace />;
-    case "USER":
+    case "EMPLOYEE":
       return <Navigate to="/painel/dashboard" replace />;
     case "CLIENT":
       return <Navigate to="/agendar/servicos" replace />;

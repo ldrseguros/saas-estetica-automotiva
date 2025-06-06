@@ -103,9 +103,15 @@ const Login: React.FC = () => {
       toast.success("Login realizado com sucesso!");
 
       // Redirecionar baseado na role
-      if (user.role === "ADMIN") {
-        // Use "ADMIN" como definido no seu Enum do Prisma
+      if (user.role === "TENANT_ADMIN" || user.role === "SUPER_ADMIN") {
+        // Administradores vão para /admin
         navigate("/admin");
+      } else if (user.role === "CLIENT") {
+        // Clientes vão para agendamento
+        navigate("/agendar/servicos");
+      } else if (user.role === "EMPLOYEE") {
+        // Funcionários vão para o painel
+        navigate("/painel");
       } else if (
         redirectPath &&
         redirectPath !== "/" &&
@@ -114,7 +120,8 @@ const Login: React.FC = () => {
         // Redirecionar para a página anterior se não for a home ou login
         navigate(redirectPath);
       } else {
-        navigate("/painel"); // Redirecionar para o painel padrão do usuário
+        // Fallback para roles desconhecidos
+        navigate("/");
       }
     } catch (error) {
       console.error("Erro no login:", error);

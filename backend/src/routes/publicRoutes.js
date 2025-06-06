@@ -1,5 +1,6 @@
 import express from "express";
 import prisma from "../lib/prisma.js";
+import bcrypt from "bcrypt";
 
 const router = express.Router();
 
@@ -29,6 +30,128 @@ router.get("/plans", async (req, res) => {
   } catch (error) {
     console.error("Erro ao buscar planos:", error);
     res.status(500).json({ message: "Erro ao buscar planos de assinatura" });
+  }
+});
+
+/**
+ * Cadastrar novo tenant (empresa)
+ * POST /api/public/signup
+ */
+router.post("/signup", async (req, res) => {
+  try {
+    const {
+      name,
+      subdomain,
+      contactEmail,
+      contactPhone,
+      address,
+      city,
+      state,
+      zipCode,
+      adminName,
+      adminEmail,
+      adminPassword,
+      planId,
+    } = req.body;
+
+    // Validações básicas
+    if (
+      !name ||
+      !subdomain ||
+      !contactEmail ||
+      !adminName ||
+      !adminEmail ||
+      !adminPassword ||
+      !planId
+    ) {
+      return res.status(400).json({
+        message:
+          "Campos obrigatórios: nome da empresa, subdomínio, email de contato, dados do administrador e plano.",
+      });
+    }
+
+    // Verificar se o subdomínio já existe
+    const existingTenant = await prisma.tenant.findUnique({
+      where: { subdomain },
+    });
+
+    if (existingTenant) {
+      return res.status(400).json({
+        message: "Subdomínio já está em uso. Escolha outro.",
+      });
+    }
+
+    // Verificar se o plano existe
+    const plan = await prisma.subscriptionPlan.findUnique({
+      where: { id: planId },
+    });
+
+    if (!plan) {
+      return res.status(400).json({
+        message: "Plano selecionado não existe.",
+      });
+    }
+
+    // Criar hash da senha
+    const hashedPassword = await bcrypt.hash(adminPassword, 10);
+
+    // Criar tenant e admin em uma transação
+    const result = await prisma.$transaction(async (tx) => {
+      // Criar o tenant
+      const tenant = await tx.tenant.create({
+        data: {
+          name,
+          subdomain,
+          contactEmail,
+          contactPhone,
+          address,
+          city,
+          state,
+          zipCode,
+          planId,
+          subscriptionStatus: "TRIAL",
+          trialEndsAt: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15 dias de trial
+        },
+      });
+
+      // Criar conta do administrador
+      const adminAccount = await tx.authAccount.create({
+        data: {
+          email: adminEmail,
+          password: hashedPassword,
+          role: "TENANT_ADMIN",
+          tenantId: tenant.id,
+          employee: {
+            create: {
+              name: adminName,
+            },
+          },
+        },
+        include: {
+          employee: true,
+        },
+      });
+
+      return { tenant, adminAccount };
+    });
+
+    // Retornar sucesso (sem dados sensíveis)
+    res.status(201).json({
+      success: true,
+      message: "Conta criada com sucesso!",
+      tenant: {
+        id: result.tenant.id,
+        name: result.tenant.name,
+        subdomain: result.tenant.subdomain,
+      },
+      redirectTo: `/admin/dashboard`,
+    });
+  } catch (error) {
+    console.error("Erro ao criar conta:", error);
+    res.status(500).json({
+      message: "Erro interno do servidor. Tente novamente.",
+      error: error.message,
+    });
   }
 });
 
@@ -71,7 +194,10 @@ router.get("/plans/:id", async (req, res) => {
  */
 router.get("/check-subdomain/:subdomain", async (req, res) => {
   try {
-    const { subdomain } = req.params;
+    let { subdomain } = req.params;
+
+    // Converter para minúsculas
+    subdomain = subdomain.toLowerCase();
 
     // Verificar se o subdomínio é válido
     const subdomainRegex = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;

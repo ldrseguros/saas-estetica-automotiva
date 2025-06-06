@@ -7,7 +7,7 @@ import { Button } from "./ui/button";
 interface User {
   name: string;
   email: string;
-  role: "ADMIN" | "CLIENT" | "USER";
+  role: "SUPER_ADMIN" | "TENANT_ADMIN" | "EMPLOYEE" | "CLIENT";
 }
 
 const Navbar: React.FC = () => {
@@ -66,14 +66,20 @@ const Navbar: React.FC = () => {
           </NavLink>
           {user && (
             <NavLink
-              to={user.role === "ADMIN" ? "/admin" : "/painel"}
+              to={
+                user.role === "TENANT_ADMIN" || user.role === "SUPER_ADMIN"
+                  ? "/admin"
+                  : "/painel"
+              }
               className={({ isActive }) =>
                 `text-sm font-medium transition-colors hover:text-primary ${
                   isActive ? "text-primary" : "text-foreground"
                 }`
               }
             >
-              {user.role === "ADMIN" ? "Admin" : "Painel"}
+              {user.role === "TENANT_ADMIN" || user.role === "SUPER_ADMIN"
+                ? "Admin"
+                : "Painel"}
             </NavLink>
           )}
         </nav>

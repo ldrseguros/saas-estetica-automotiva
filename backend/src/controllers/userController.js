@@ -14,8 +14,13 @@ const prisma = new PrismaClient();
 // @access  Admin
 export const getAllUsers = async (req, res) => {
   const { email, role, page = 1, limit = 10 } = req.query;
+  const tenantId = req.user.tenantId; // Obter tenantId do usuário autenticado
+
   try {
-    const result = await fetchAllUsers({ email, role }, { page, limit });
+    const result = await fetchAllUsers(
+      { email, role, tenantId },
+      { page, limit }
+    );
     res.status(200).json(result);
   } catch (error) {
     console.error("Error in getAllUsers controller:", error);

@@ -17,7 +17,7 @@ const transformAccountToUser = (account) => {
 };
 
 export const fetchAllUsers = async (filters, pagination) => {
-  const { email, role } = filters;
+  const { email, role, tenantId } = filters;
   const { page = 1, limit = 10 } = pagination;
 
   const whereCondition = {};
@@ -26,6 +26,9 @@ export const fetchAllUsers = async (filters, pagination) => {
   }
   if (role) {
     whereCondition.role = Array.isArray(role) ? { in: role } : role;
+  }
+  if (tenantId) {
+    whereCondition.tenantId = tenantId; // Filtrar por tenant
   }
 
   const offset = (Number(page) - 1) * Number(limit);
@@ -123,8 +126,8 @@ export const modifyUser = async (id, userData) => {
       // If the user was an employee, their employee profile should be disassociated or deleted
       // For simplicity, we are not handling role *changes* from Employee to Client that require deleting old profile.
       // This logic assumes if role is CLIENT, we operate on ClientProfile.
-    } else if (["ADMIN", "USER"].includes(role)) {
-      // If role changes to ADMIN/USER or is ADMIN/USER and name changes
+    } else if (["TENANT_ADMIN", "EMPLOYEE", "SUPER_ADMIN"].includes(role)) {
+      // If role changes to TENANT_ADMIN/EMPLOYEE/SUPER_ADMIN or is any of these roles and name changes
       await tx.employeeProfile.upsert({
         where: { accountId: id },
         update: { name },

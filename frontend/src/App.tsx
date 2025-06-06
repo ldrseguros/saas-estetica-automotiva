@@ -9,12 +9,13 @@ import BookingLayout from "./pages/Booking";
 import Services from "./pages/Services";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Auth/Login";
-import AdminDashboard from "./pages/Admin";
+
 import Usuarios from "./pages/Admin/Usuarios";
 import Clientes from "./pages/Admin/Clientes";
 import WhatsApp from "./pages/Admin/WhatsApp";
 import Assinatura from "./pages/Admin/Assinatura";
 import TenantDashboard from "./pages/Admin/TenantDashboard";
+import ProtectedRoute from "./components/common/ProtectedRoute";
 
 // Novas páginas SaaS
 import LandingPage from "./pages/LandingPage";
@@ -23,6 +24,27 @@ import Checkout from "./pages/Checkout";
 import PublicBooking from "./pages/PublicBooking";
 
 const queryClient = new QueryClient();
+
+// Página de não autorizado
+const UnauthorizedPage = () => (
+  <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
+    <div className="text-center">
+      <h1 className="text-6xl font-bold text-red-600 mb-4">403</h1>
+      <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+        Acesso Negado
+      </h2>
+      <p className="text-gray-600 mb-8">
+        Você não tem permissão para acessar esta página.
+      </p>
+      <button
+        onClick={() => window.history.back()}
+        className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+      >
+        Voltar
+      </button>
+    </div>
+  </div>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -37,22 +59,86 @@ const App = () => (
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/login" element={<Login />} />
           <Route path="/agendar-servico" element={<PublicBooking />} />
+          <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
           {/* Rota original da página home (renomeada para /cliente) */}
           <Route path="/cliente" element={<Home />} />
 
-          {/* Rotas protegidas */}
-          <Route path="/painel" element={<Dashboard />} />
-          <Route path="/servicos" element={<Services />} />
-          <Route path="/agendar/*" element={<BookingLayout />} />
+          {/* Rotas protegidas para usuários/clientes */}
+          <Route
+            path="/painel"
+            element={
+              <ProtectedRoute allowedRoles={["EMPLOYEE", "CLIENT"]}>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/servicos"
+            element={
+              <ProtectedRoute allowedRoles={["EMPLOYEE", "CLIENT"]}>
+                <Services />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/agendar/*"
+            element={
+              <ProtectedRoute allowedRoles={["EMPLOYEE", "CLIENT"]}>
+                <BookingLayout />
+              </ProtectedRoute>
+            }
+          />
 
-          {/* Rotas de administração */}
-          <Route path="/admin" element={<TenantDashboard />} />
-          <Route path="/admin/dashboard" element={<TenantDashboard />} />
-          <Route path="/admin/usuarios" element={<Usuarios />} />
-          <Route path="/admin/clientes" element={<Clientes />} />
-          <Route path="/admin/whatsapp" element={<WhatsApp />} />
-          <Route path="/admin/assinatura" element={<Assinatura />} />
+          {/* Rotas de administração - apenas para TENANT_ADMIN e SUPER_ADMIN */}
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute allowedRoles={["TENANT_ADMIN", "SUPER_ADMIN"]}>
+                <TenantDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={["TENANT_ADMIN", "SUPER_ADMIN"]}>
+                <TenantDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/usuarios"
+            element={
+              <ProtectedRoute allowedRoles={["TENANT_ADMIN", "SUPER_ADMIN"]}>
+                <Usuarios />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/clientes"
+            element={
+              <ProtectedRoute allowedRoles={["TENANT_ADMIN", "SUPER_ADMIN"]}>
+                <Clientes />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/whatsapp"
+            element={
+              <ProtectedRoute allowedRoles={["TENANT_ADMIN", "SUPER_ADMIN"]}>
+                <WhatsApp />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/assinatura"
+            element={
+              <ProtectedRoute allowedRoles={["TENANT_ADMIN", "SUPER_ADMIN"]}>
+                <Assinatura />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Rota de captura */}
           <Route path="*" element={<NotFound />} />

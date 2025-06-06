@@ -76,7 +76,7 @@ const api = axios.create({
 
 // Interceptor para adicionar o token de autenticação
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
+  const token = sessionStorage.getItem("token");
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -110,8 +110,8 @@ api.interceptors.response.use(
 
     // Tratar erro 401 (não autenticado)
     if (response && response.status === 401) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
+      sessionStorage.removeItem("token");
+      sessionStorage.removeItem("user");
 
       // Redirecionar para login se não for uma página pública
       const publicPaths = ["/", "/cadastro", "/login", "/checkout"];
@@ -144,8 +144,8 @@ export const authAPI = {
   },
 
   logout: () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    sessionStorage.removeItem("token");
+    sessionStorage.removeItem("user");
     window.location.href = "/login";
   },
 

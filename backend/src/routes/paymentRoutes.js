@@ -1,7 +1,8 @@
 import express from "express";
 import { PrismaClient } from "@prisma/client";
 import Stripe from "stripe";
-import jwt from "jsonwebtoken";
+import protect from "../middlewares/authMiddleware.js";
+import { authorizeRoles } from "../middlewares/roleMiddleware.js";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -52,26 +53,6 @@ try {
     },
   };
 }
-
-// Middleware para verificar JWT
-const authenticateJWT = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-
-  if (authHeader) {
-    const token = authHeader.split(" ")[1];
-
-    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-      if (err) {
-        return res.status(403).json({ message: "Token inválido ou expirado" });
-      }
-
-      req.user = user;
-      next();
-    });
-  } else {
-    res.status(401).json({ message: "Autenticação necessária" });
-  }
-};
 
 /**
  * Criar uma sessão de checkout para assinatura
@@ -199,99 +180,102 @@ router.post(
  * Obter o status da assinatura do tenant atual
  * GET /api/payments/subscription-status
  */
-router.get("/subscription-status", authenticateJWT, async (req, res) => {
-  try {
-    // Apenas TENANT_ADMIN pode verificar o status da assinatura
-    if (req.user.role !== "TENANT_ADMIN" && req.user.role !== "SUPER_ADMIN") {
-      return res.status(403).json({ message: "Acesso negado" });
-    }
+router.get(
+  "/subscription-status",
+  protect,
+  authorizeRoles("TENANT_ADMIN", "SUPER_ADMIN"),
+  async (req, res) => {
+    try {
+      const tenantId = req.user.tenantId;
 
-    const tenantId = req.user.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant não identificado" });
+      }
 
-    if (!tenantId) {
-      return res.status(400).json({ message: "Tenant não identificado" });
-    }
-
-    const tenant = await prisma.tenant.findUnique({
-      where: { id: tenantId },
-      select: {
-        subscriptionStatus: true,
-        trialEndsAt: true,
-        subscriptionEndsAt: true,
-        subscriptionPlan: {
-          select: {
-            name: true,
-            price: true,
-            billingCycle: true,
+      const tenant = await prisma.tenant.findUnique({
+        where: { id: tenantId },
+        select: {
+          subscriptionStatus: true,
+          trialEndsAt: true,
+          subscriptionEndsAt: true,
+          subscriptionPlan: {
+            select: {
+              name: true,
+              price: true,
+              billingCycle: true,
+            },
           },
         },
-      },
-    });
+      });
 
-    if (!tenant) {
-      return res.status(404).json({ message: "Tenant não encontrado" });
+      if (!tenant) {
+        return res.status(404).json({ message: "Tenant não encontrado" });
+      }
+
+      res.json({
+        status: tenant.subscriptionStatus,
+        plan: tenant.subscriptionPlan,
+        trialEndsAt: tenant.trialEndsAt,
+        subscriptionEndsAt: tenant.subscriptionEndsAt,
+      });
+    } catch (error) {
+      console.error("Erro ao verificar status da assinatura:", error);
+      res
+        .status(500)
+        .json({ message: "Erro ao verificar status da assinatura" });
     }
-
-    res.json({
-      status: tenant.subscriptionStatus,
-      plan: tenant.subscriptionPlan,
-      trialEndsAt: tenant.trialEndsAt,
-      subscriptionEndsAt: tenant.subscriptionEndsAt,
-    });
-  } catch (error) {
-    console.error("Erro ao verificar status da assinatura:", error);
-    res.status(500).json({ message: "Erro ao verificar status da assinatura" });
   }
-});
+);
 
 /**
  * Criar portal de gerenciamento de assinatura do cliente
  * POST /api/payments/create-customer-portal
  */
-router.post("/create-customer-portal", authenticateJWT, async (req, res) => {
-  try {
-    // Apenas TENANT_ADMIN pode acessar o portal do cliente
-    if (req.user.role !== "TENANT_ADMIN") {
-      return res.status(403).json({ message: "Acesso negado" });
-    }
+router.post(
+  "/create-customer-portal",
+  protect,
+  authorizeRoles("TENANT_ADMIN", "SUPER_ADMIN"),
+  async (req, res) => {
+    try {
+      const tenantId = req.user.tenantId;
+      const { returnUrl } = req.body;
 
-    const tenantId = req.user.tenantId;
-    const { returnUrl } = req.body;
+      if (!tenantId) {
+        return res.status(400).json({ message: "Tenant não identificado" });
+      }
 
-    if (!tenantId) {
-      return res.status(400).json({ message: "Tenant não identificado" });
-    }
-
-    // Buscar o tenant
-    const tenant = await prisma.tenant.findUnique({
-      where: { id: tenantId },
-    });
-
-    if (!tenant) {
-      return res.status(404).json({ message: "Tenant não encontrado" });
-    }
-
-    // Verificar se o tenant tem um customerId do Stripe
-    let customerId = tenant.stripeCustomerId;
-
-    if (!customerId) {
-      return res.status(400).json({
-        message: "Este tenant ainda não possui uma assinatura ativa no Stripe",
+      // Buscar o tenant
+      const tenant = await prisma.tenant.findUnique({
+        where: { id: tenantId },
       });
+
+      if (!tenant) {
+        return res.status(404).json({ message: "Tenant não encontrado" });
+      }
+
+      // Verificar se o tenant tem um customerId do Stripe
+      let customerId = tenant.stripeCustomerId;
+
+      if (!customerId) {
+        return res.status(400).json({
+          message:
+            "Este tenant ainda não possui uma assinatura ativa no Stripe",
+        });
+      }
+
+      // Criar a sessão do portal
+      const session = await stripe.billingPortal.sessions.create({
+        customer: customerId,
+        return_url: returnUrl,
+      });
+
+      res.json({ url: session.url });
+    } catch (error) {
+      console.error("Erro ao criar portal do cliente:", error);
+      res.status(500).json({ message: "Erro ao criar portal do cliente" });
     }
-
-    // Criar a sessão do portal
-    const session = await stripe.billingPortal.sessions.create({
-      customer: customerId,
-      return_url: returnUrl,
-    });
-
-    res.json({ url: session.url });
-  } catch (error) {
-    console.error("Erro ao criar portal do cliente:", error);
-    res.status(500).json({ message: "Erro ao criar portal do cliente" });
   }
-});
+);
 
 // Função para obter ou criar um produto no Stripe
 async function getOrCreateStripeProduct(planName) {

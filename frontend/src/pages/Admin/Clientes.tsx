@@ -34,6 +34,7 @@ import ConfirmDialog from "../../components/ConfirmDialog";
 import { toast } from "sonner";
 import { validateUserForm, formatWhatsApp } from "../../utils/validation";
 import EditClientModal from "../../components/Admin/EditClientModal";
+import AdminLayout from "@/components/Admin/AdminLayout";
 
 interface Cliente {
   id: string;
@@ -79,8 +80,14 @@ const Clientes: React.FC = () => {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        setClientes(response.data.users);
-        setPagination(response.data.pagination);
+        setClientes(response.data.users || []);
+        setPagination(
+          response.data.pagination || {
+            currentPage: 1,
+            totalPages: 1,
+            totalUsers: 0,
+          }
+        );
       } catch (error) {
         toast.error("Erro ao buscar clientes");
         console.error("Erro ao buscar clientes:", error);
@@ -190,120 +197,122 @@ const Clientes: React.FC = () => {
   };
 
   return (
-    <Box sx={{ padding: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        Clientes
-      </Typography>
+    <AdminLayout>
+      <Box sx={{ padding: 3 }}>
+        <Typography variant="h4" gutterBottom>
+          Clientes
+        </Typography>
 
-      <Box sx={{ display: "flex", gap: 2, marginBottom: 2 }}>
-        <TextField
-          label="Buscar por email"
-          variant="outlined"
-          fullWidth
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <Button variant="contained" color="primary" onClick={handleSearch}>
-          Buscar
-        </Button>
-      </Box>
+        <Box sx={{ display: "flex", gap: 2, marginBottom: 2 }}>
+          <TextField
+            label="Buscar por email"
+            variant="outlined"
+            fullWidth
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <Button variant="contained" color="primary" onClick={handleSearch}>
+            Buscar
+          </Button>
+        </Box>
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Nome</TableCell>
-              <TableCell>Email</TableCell>
-              <TableCell>WhatsApp</TableCell>
-              <TableCell>Data de Criação</TableCell>
-              <TableCell>Ações</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {clientes.map((cliente) => (
-              <TableRow key={cliente.id}>
-                <TableCell>{cliente.name}</TableCell>
-                <TableCell>{cliente.email}</TableCell>
-                <TableCell>{cliente.whatsapp || "Não informado"}</TableCell>
-                <TableCell>
-                  {new Date(cliente.createdAt).toLocaleDateString()}
-                </TableCell>
-                <TableCell>
-                  <Box sx={{ display: "flex", gap: 1 }}>
-                    <Tooltip title="Editar cliente">
-                      <IconButton
-                        color="primary"
-                        onClick={() => handleEditCliente(cliente)}
-                        size="small"
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Excluir cliente">
-                      <IconButton
-                        color="error"
-                        onClick={() => {
-                          setEditCliente(cliente);
-                          setConfirmDelete(true);
-                        }}
-                        size="small"
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                    <IconButton
-                      size="small"
-                      onClick={(e) => handleOpenMenu(e, cliente)}
-                    >
-                      <MoreVertIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
-                </TableCell>
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Nome</TableCell>
+                <TableCell>Email</TableCell>
+                <TableCell>WhatsApp</TableCell>
+                <TableCell>Data de Criação</TableCell>
+                <TableCell>Ações</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+            </TableHead>
+            <TableBody>
+              {clientes.map((cliente) => (
+                <TableRow key={cliente.id}>
+                  <TableCell>{cliente.name}</TableCell>
+                  <TableCell>{cliente.email}</TableCell>
+                  <TableCell>{cliente.whatsapp || "Não informado"}</TableCell>
+                  <TableCell>
+                    {new Date(cliente.createdAt).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: "flex", gap: 1 }}>
+                      <Tooltip title="Editar cliente">
+                        <IconButton
+                          color="primary"
+                          onClick={() => handleEditCliente(cliente)}
+                          size="small"
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Excluir cliente">
+                        <IconButton
+                          color="error"
+                          onClick={() => {
+                            setEditCliente(cliente);
+                            setConfirmDelete(true);
+                          }}
+                          size="small"
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => handleOpenMenu(e, cliente)}
+                      >
+                        <MoreVertIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
 
-      <Pagination
-        currentPage={pagination.currentPage}
-        totalPages={pagination.totalPages}
-        onPageChange={handlePageChange}
-      />
+        <Pagination
+          currentPage={pagination.currentPage}
+          totalPages={pagination.totalPages}
+          onPageChange={handlePageChange}
+        />
 
-      {/* Menu de Ações */}
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleCloseMenu}
-      >
-        <MenuItem onClick={() => handleEditCliente(editCliente!)}>
-          <EditIcon sx={{ marginRight: 1 }} /> Editar
-        </MenuItem>
-        <MenuItem onClick={() => setConfirmDelete(true)}>
-          <DeleteIcon sx={{ marginRight: 1, color: "red" }} /> Excluir
-        </MenuItem>
-      </Menu>
+        {/* Menu de Ações */}
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleCloseMenu}
+        >
+          <MenuItem onClick={() => handleEditCliente(editCliente!)}>
+            <EditIcon sx={{ marginRight: 1 }} /> Editar
+          </MenuItem>
+          <MenuItem onClick={() => setConfirmDelete(true)}>
+            <DeleteIcon sx={{ marginRight: 1, color: "red" }} /> Excluir
+          </MenuItem>
+        </Menu>
 
-      {/* Modal de Edição de Cliente */}
-      <EditClientModal
-        open={openEditModal}
-        onClose={() => setOpenEditModal(false)}
-        cliente={editCliente}
-        onSaveSuccess={() => fetchClientes(pagination.currentPage)}
-      />
+        {/* Modal de Edição de Cliente */}
+        <EditClientModal
+          open={openEditModal}
+          onClose={() => setOpenEditModal(false)}
+          cliente={editCliente}
+          onSaveSuccess={() => fetchClientes(pagination.currentPage)}
+        />
 
-      {/* Diálogo de Confirmação de Exclusão */}
-      <ConfirmDialog
-        open={confirmDelete}
-        title="Confirmar Exclusão"
-        message="Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita."
-        onConfirm={handleDeleteCliente}
-        onCancel={() => setConfirmDelete(false)}
-        confirmText="Excluir"
-        cancelText="Cancelar"
-      />
-    </Box>
+        {/* Diálogo de Confirmação de Exclusão */}
+        <ConfirmDialog
+          open={confirmDelete}
+          title="Confirmar Exclusão"
+          message="Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita."
+          onConfirm={handleDeleteCliente}
+          onCancel={() => setConfirmDelete(false)}
+          confirmText="Excluir"
+          cancelText="Cancelar"
+        />
+      </Box>
+    </AdminLayout>
   );
 };
 
