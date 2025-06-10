@@ -5,6 +5,11 @@ import {
   modifyService,
   removeService,
 } from "../services/serviceService.js";
+import fs from "fs";
+import path from "path";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 // @desc    Get all services
 // @route   GET /api/admin/services
@@ -101,13 +106,28 @@ export const updateService = async (req, res) => {
   const { title, description, price, duration, imageSrc } = req.body;
 
   try {
-    // It's good practice to ensure the resource exists before attempting to update
-    // This can be done in the service or controller
     const existingService = await findServiceById(id);
     if (!existingService) {
       return res
         .status(404)
         .json({ message: "Service not found, cannot update." });
+    }
+
+    // Se a imagem mudou, exclui a antiga
+    if (
+      existingService.imageSrc &&
+      imageSrc &&
+      existingService.imageSrc !== imageSrc
+    ) {
+      const oldImagePath = path.join(
+        process.cwd(),
+        existingService.imageSrc.startsWith("/uploads")
+          ? existingService.imageSrc.substring(1)
+          : existingService.imageSrc
+      );
+      if (fs.existsSync(oldImagePath)) {
+        fs.unlinkSync(oldImagePath);
+      }
     }
 
     const updatedService = await modifyService(id, {
@@ -125,7 +145,6 @@ export const updateService = async (req, res) => {
         .status(409)
         .json({ message: "A service with this title already exists." });
     }
-    // P2025: Record to update not found (handled by explicit check above, but good to be aware of for other Prisma errors)
     res.status(500).json({
       message: `Error updating service with ID ${id}`,
       error: error.message,
@@ -139,25 +158,21 @@ export const updateService = async (req, res) => {
 export const deleteService = async (req, res) => {
   const { id } = req.params;
   try {
-    // Ensure the resource exists before attempting to delete
-    const existingService = await findServiceById(id);
-    if (!existingService) {
-      return res
-        .status(404)
-        .json({ message: "Service not found, cannot delete." });
+    // Verifica se existe algum agendamento vinculado a este serviço
+    const bookingsWithService = await prisma.bookingService.findMany({
+      where: { serviceId: id },
+    });
+    if (bookingsWithService.length > 0) {
+      return res.status(400).json({
+        message:
+          "Não é possível deletar este serviço pois ele está vinculado a agendamentos.",
+      });
     }
-
+    // Se não houver vínculos, pode deletar normalmente
     await removeService(id);
-    res
-      .status(200)
-      .json({ message: `Service with ID ${id} deleted successfully` });
+    res.status(200).json({ message: "Serviço deletado com sucesso." });
   } catch (error) {
     console.error(`Error in deleteService controller (ID: ${id}):`, error);
-    // Handle specific Prisma errors if needed, e.g., P2003 for foreign key constraint violation
-    // if it's not handled/prevented in the service layer or by application logic.
-    res.status(500).json({
-      message: `Error deleting service with ID ${id}`,
-      error: error.message,
-    });
+    res.status(500).json({ message: "Erro ao deletar serviço" });
   }
 };

@@ -12,11 +12,17 @@ const prisma = new PrismaClient();
 
 export const fetchDashboardStatistics = async () => {
   try {
+    console.log(
+      "[DashboardService] Iniciando busca de estatísticas do dashboard..."
+    );
     // 1. Bookings for today
     const today = new Date();
     const startOfToday = startOfDay(today);
     const endOfToday = endOfDay(today);
 
+    console.log(
+      "[DashboardService] Buscando quantidade de agendamentos de hoje..."
+    );
     const bookingsToday = await prisma.booking.count({
       where: {
         date: {
@@ -26,11 +32,14 @@ export const fetchDashboardStatistics = async () => {
         // status: { not: 'cancelled' } // Optional: Filter out cancelled bookings
       },
     });
+    console.log(`[DashboardService] Agendamentos de hoje: ${bookingsToday}`);
 
     // 2. Total bookings
+    console.log("[DashboardService] Buscando total de agendamentos...");
     const totalBookings = await prisma.booking.count({
       // where: { status: { not: 'cancelled' } } // Optional: Filter out cancelled bookings
     });
+    console.log(`[DashboardService] Total de agendamentos: ${totalBookings}`);
 
     // 3. New clients per month (e.g., last 6 months)
     const monthsToQuery = 6;
@@ -40,6 +49,9 @@ export const fetchDashboardStatistics = async () => {
       const firstDayOfMonth = startOfMonth(dateCursor);
       const lastDayOfMonth = endOfMonth(dateCursor);
 
+      console.log(
+        `[DashboardService] Buscando clientes criados entre ${firstDayOfMonth} e ${lastDayOfMonth}...`
+      );
       const newClientsThisMonth = await prisma.clientProfile.count({
         where: {
           createdAt: {
@@ -48,6 +60,9 @@ export const fetchDashboardStatistics = async () => {
           },
         },
       });
+      console.log(
+        `[DashboardService] Novos clientes neste mês: ${newClientsThisMonth}`
+      );
       clientCountsByMonth.push({
         month: format(firstDayOfMonth, "yyyy-MM"), // e.g., "2023-12"
         count: newClientsThisMonth,
@@ -55,20 +70,18 @@ export const fetchDashboardStatistics = async () => {
     }
     clientCountsByMonth.reverse(); // Oldest month first
 
+    console.log("[DashboardService] Estatísticas coletadas com sucesso.");
     return {
       bookingsToday,
       totalBookings,
       newClientsPerMonth: clientCountsByMonth,
     };
   } catch (error) {
-    console.error("Error in fetchDashboardStatistics service:", error);
+    console.error("[DashboardService] Erro ao buscar estatísticas:", error);
     // Re-throw the error to be caught by the controller or a global error handler
-    // Optionally, you can wrap it in a custom error object with a status code
     const serviceError = new Error(
-      "Failed to fetch dashboard statistics from service."
+      "Failed to fetch dashboard statistics from service. " + error.message
     );
-    // serviceError.statusCode = 500; // Or determine based on Prisma error codes
-    // serviceError.originalError = error;
-    throw serviceError; // Or simply: throw error;
+    throw serviceError;
   }
 };

@@ -341,9 +341,13 @@ const ServicesPage = () => {
         <div className="flex items-center space-x-3">
           {service.imageSrc ? (
             <img
-              src={service.imageSrc}
+              src={`http://localhost:3000${service.imageSrc}`}
               alt={service.title}
               className="h-10 w-10 rounded-lg object-cover"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src =
+                  "/img/placeholder.png";
+              }}
             />
           ) : (
             <div className="h-10 w-10 rounded-lg bg-gray-200 flex items-center justify-center">
@@ -557,9 +561,13 @@ const ServicesPage = () => {
                         {formData.imageSrc ? (
                           <div className="relative">
                             <img
-                              src={formData.imageSrc}
+                              src={`http://localhost:3000${formData.imageSrc}`}
                               alt="Preview"
                               className="mx-auto h-32 w-32 object-cover rounded-lg"
+                              onError={(e) => {
+                                (e.currentTarget as HTMLImageElement).src =
+                                  "/img/placeholder.png";
+                              }}
                             />
                             <button
                               onClick={() =>
@@ -614,7 +622,7 @@ const ServicesPage = () => {
                             title: e.target.value,
                           }))
                         }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                        className="w-full px-3 py-2 border text-black border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
                         placeholder="Ex: Lavagem Completa"
                         required
                       />
@@ -634,7 +642,7 @@ const ServicesPage = () => {
                           }))
                         }
                         rows={3}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                        className="w-full px-3 py-2 border text-black border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
                         placeholder="Descreva o serviço oferecido..."
                       />
                     </div>
@@ -656,7 +664,7 @@ const ServicesPage = () => {
                               price: parseFloat(e.target.value) || 0,
                             }))
                           }
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                          className="w-full px-3 py-2 border text-black border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
                           placeholder="0,00"
                           required
                         />
@@ -676,7 +684,7 @@ const ServicesPage = () => {
                               duration: parseInt(e.target.value) || 60,
                             }))
                           }
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                          className="w-full px-3 py-2 border text-black border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
                           placeholder="60"
                           required
                         />

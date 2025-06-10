@@ -59,7 +59,6 @@ const App = () => (
           <Route path="/cadastro" element={<Cadastro />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/agendar-servico" element={<PublicBooking />} />
           <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
           {/* Rota original da página home (renomeada para /cliente) */}

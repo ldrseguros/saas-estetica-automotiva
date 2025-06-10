@@ -25,7 +25,9 @@ const prisma = new PrismaClient();
 // @access  Admin
 export const getAllBookingsAdmin = async (req, res) => {
   try {
-    const bookings = await fetchAllBookingsAdmin();
+    const limit = req.query.limit ? parseInt(req.query.limit, 10) : 10;
+    const fromDate = req.query.fromDate;
+    const bookings = await fetchAllBookingsAdmin({ limit, fromDate });
     res.status(200).json(bookings);
   } catch (error) {
     console.error("Error in getAllBookingsAdmin controller:", error);

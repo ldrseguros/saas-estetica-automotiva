@@ -26,13 +26,13 @@ router.get("/available-slots", getAvailableTimeSlots);
 // --- Admin routes for managing all bookings ---
 router
   .route("/admin")
-  .all(protect, authorizeRoles("ADMIN"))
+  .all(protect, authorizeRoles("TENANT_ADMIN", "SUPER_ADMIN"))
   .get(getAllBookingsAdmin)
   .post(createBookingAdmin);
 
 router
   .route("/admin/:id")
-  .all(protect, authorizeRoles("ADMIN"))
+  .all(protect, authorizeRoles("TENANT_ADMIN", "SUPER_ADMIN"))
   .get(getBookingByIdAdmin)
   .put(updateBookingAdmin)
   .delete(deleteBookingAdmin);

@@ -134,9 +134,13 @@ const SelectService: React.FC = () => {
               <div className="service-image-container h-40 bg-slate-700 relative overflow-hidden">
                 {service.imageSrc ? (
                   <img
-                    src={service.imageSrc}
+                    src={`http://localhost:3000${service.imageSrc}`}
                     alt={`Imagem do serviço ${service.title}`}
                     className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src =
+                        "/img/placeholder.png";
+                    }}
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-slate-700 text-slate-400">

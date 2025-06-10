@@ -116,23 +116,23 @@ const WhatsAppPage: React.FC = () => {
         throw new Error("Erro ao buscar clientes");
       }
 
-      const allUsers = await response.json();
-      const clientsWithWhatsApp = allUsers
+      const allUsersResponse = await response.json();
+      const clientsWithWhatsApp = (allUsersResponse.users || [])
         .filter(
-          (user: { role: string; clientProfile?: { whatsapp?: string } }) =>
-            user.role === "CLIENT" && user.clientProfile?.whatsapp
+          (user: { role: string; whatsapp?: string }) =>
+            user.role === "CLIENT" && user.whatsapp
         )
         .map(
           (user: {
             id: string;
             name: string;
             email: string;
-            clientProfile: { whatsapp: string };
+            whatsapp: string;
           }) => ({
             id: user.id,
             name: user.name,
             email: user.email,
-            whatsapp: user.clientProfile.whatsapp,
+            whatsapp: user.whatsapp,
           })
         );
 

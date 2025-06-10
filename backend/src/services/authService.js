@@ -66,7 +66,7 @@ export const authenticateUser = async (credentials) => {
       tenantId: account.tenantId,
     },
     JWT_SECRET,
-    { expiresIn: "1h" }
+    { expiresIn: "8h" }
   );
 
   let userName = "";

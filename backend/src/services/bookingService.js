@@ -18,14 +18,39 @@ const getClientProfileIdFromAuthId = async (authAccountId) => {
 
 // --- ADMIN BOOKING SERVICES ---
 
-export const fetchAllBookingsAdmin = async () => {
+export const fetchAllBookingsAdmin = async ({ limit = 10, fromDate } = {}) => {
+  // Se não passar fromDate, pega hoje
+  const now = fromDate ? new Date(fromDate) : new Date();
+  const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
   return await prisma.booking.findMany({
-    include: {
-      client: { include: { account: { select: { email: true, id: true } } } },
+    where: {
+      date: {
+        gte: now,
+        lte: nextWeek,
+      },
+      status: { not: "CANCELLED" },
+    },
+    select: {
+      id: true,
+      date: true,
+      time: true,
+      status: true,
+      client: {
+        select: {
+          name: true,
+          account: { select: { email: true } },
+        },
+      },
       vehicle: true,
-      services: { include: { service: true } },
+      services: {
+        select: {
+          service: { select: { title: true, price: true } },
+        },
+      },
     },
     orderBy: [{ date: "asc" }, { time: "asc" }],
+    take: limit,
   });
 };
 

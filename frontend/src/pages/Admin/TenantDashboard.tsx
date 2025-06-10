@@ -54,6 +54,22 @@ interface DashboardData {
   totalServices: number;
 }
 
+// Definir tipo para o retorno da API de agendamentos
+interface BookingApi {
+  id: string;
+  date: string;
+  time: string;
+  status: string;
+  client: {
+    name: string;
+    account: {
+      email: string;
+    } | null;
+  } | null;
+  vehicle: unknown;
+  services: Array<{ service: { title: string; price: number } | null }>;
+}
+
 const TenantDashboard = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -88,21 +104,42 @@ const TenantDashboard = () => {
         const stats = await statsResponse.json();
 
         // Buscar agendamentos recentes (próximos)
-        const bookingsResponse = await fetch("/api/bookings/admin", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
+        const now = new Date();
+        const fromDate = now.toISOString().split("T")[0];
+        const bookingsResponse = await fetch(
+          `/api/bookings/admin?limit=5&fromDate=${fromDate}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
 
         if (!bookingsResponse.ok) {
           throw new Error("Erro ao buscar agendamentos");
         }
 
-        const allBookings = await bookingsResponse.json();
+        const allBookingsRaw: BookingApi[] = await bookingsResponse.json();
+        // Adaptar para o formato esperado pelo dashboard
+        const allBookings: UpcomingBooking[] = allBookingsRaw.map(
+          (booking) => ({
+            id: booking.id,
+            date: booking.date,
+            startTime: booking.time,
+            status: booking.status as UpcomingBooking["status"],
+            client: {
+              name: booking.client?.name || "",
+              email: booking.client?.account?.email || "",
+            },
+            services: (booking.services || []).map((s) => ({
+              name: s.service?.title || "",
+              price: s.service?.price || 0,
+            })),
+          })
+        );
 
         // Filtrar próximos agendamentos (próximos 7 dias)
-        const now = new Date();
         const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
         const upcomingBookings = allBookings
@@ -132,8 +169,8 @@ const TenantDashboard = () => {
           throw new Error("Erro ao buscar clientes");
         }
 
-        const allUsers = await clientsResponse.json();
-        const totalClients = allUsers.filter(
+        const allUsersResponse = await clientsResponse.json();
+        const totalClients = (allUsersResponse.users || []).filter(
           (user: { role: string }) => user.role === "CLIENT"
         ).length;
 
@@ -485,24 +522,6 @@ const TenantDashboard = () => {
                 <span className="text-lg font-semibold text-gray-700">
                   {formatCurrency(calculateTotalRevenue() * 0.1)}
                 </span>
-              </div>
-
-              {/* Simple Progress Bars */}
-              <div className="space-y-3 pt-4">
-                <div>
-                  <div className="flex justify-between text-xs text-gray-500 mb-1">
-                    <span>Meta Mensal</span>
-                    <span>75%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: "75%" }}
-                      transition={{ delay: 0.5, duration: 1 }}
-                      className="bg-gradient-to-r from-red-500 to-red-600 h-2 rounded-full"
-                    ></motion.div>
-                  </div>
-                </div>
               </div>
             </div>
           </ModernCard>

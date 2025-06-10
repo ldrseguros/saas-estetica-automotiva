@@ -64,6 +64,16 @@ const Navbar: React.FC = () => {
           >
             Agendar
           </NavLink>
+          <NavLink
+            to="/servicos"
+            className={({ isActive }) =>
+              `text-sm font-medium transition-colors hover:text-primary ${
+                isActive ? "text-primary" : "text-foreground"
+              }`
+            }
+          >
+            Serviços
+          </NavLink>
           {user && (
             <NavLink
               to={
