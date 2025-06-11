@@ -23,6 +23,10 @@ import LandingPage from "./pages/LandingPage";
 import Cadastro from "./pages/Cadastro";
 import Checkout from "./pages/Checkout";
 import PublicBooking from "./pages/PublicBooking";
+import DashboardFinanceiro from "./pages/Admin/Financeiro/Dashboard";
+import TransacoesFinanceiras from "./pages/Admin/Financeiro/Transacoes.tsx";
+import CategoriasFinanceiras from "./pages/Admin/Financeiro/Categorias";
+import MetodosPagamento from "./pages/Admin/Financeiro/Metodos";
 
 const queryClient = new QueryClient();
 
@@ -144,6 +148,38 @@ const App = () => (
             element={
               <ProtectedRoute allowedRoles={["TENANT_ADMIN", "SUPER_ADMIN"]}>
                 <Assinatura />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/financeiro"
+            element={
+              <ProtectedRoute allowedRoles={["TENANT_ADMIN", "SUPER_ADMIN"]}>
+                <DashboardFinanceiro />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/financeiro/transacoes"
+            element={
+              <ProtectedRoute allowedRoles={["TENANT_ADMIN", "SUPER_ADMIN"]}>
+                <TransacoesFinanceiras />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/financeiro/categorias"
+            element={
+              <ProtectedRoute allowedRoles={["TENANT_ADMIN", "SUPER_ADMIN"]}>
+                <CategoriasFinanceiras />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/financeiro/metodos"
+            element={
+              <ProtectedRoute allowedRoles={["TENANT_ADMIN", "SUPER_ADMIN"]}>
+                <MetodosPagamento />
               </ProtectedRoute>
             }
           />

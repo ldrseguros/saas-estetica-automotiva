@@ -83,6 +83,7 @@ export const authenticateUser = async (credentials) => {
       email: account.email,
       name: userName,
       role: account.role,
+      tenantId: account.tenantId,
     },
   };
 };

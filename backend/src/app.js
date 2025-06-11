@@ -20,6 +20,10 @@ import paymentRoutes from "./routes/paymentRoutes.js"; // Rotas para processamen
 
 import { tenantMiddleware } from "./middlewares/tenantMiddleware.js"; // Middleware para identificar tenant
 
+import transactionRoutes from "./routes/finance/transactions.js";
+import categoryRoutes from "./routes/finance/categories.js";
+import methodRoutes from "./routes/finance/methods.js";
+
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -59,6 +63,10 @@ app.use("/api/admin/settings", settingsRoutes);
 // Rotas de superadmin (gerenciamento do SaaS)
 app.use("/api/superadmin/tenants", tenantRoutes); // Gerenciamento de tenants
 app.use("/api/superadmin/subscriptions", subscriptionRoutes); // Gerenciamento de planos e assinaturas
+
+app.use("/api/finance/transactions", transactionRoutes);
+app.use("/api/finance/categories", categoryRoutes);
+app.use("/api/finance/methods", methodRoutes);
 
 app.get("/", (req, res) => {
   res.send("Backend is running!");

@@ -281,3 +281,38 @@ model AuditLog {
   userAgent   String?
   createdAt   DateTime  @default(now())
 }
+
+model Transaction {
+  id          String   @id @default(uuid())
+  type        TransactionType
+  description String
+  value       Float
+  date        DateTime
+  category    Category? @relation(fields: [categoryId], references: [id])
+  categoryId  String?
+  method      PaymentMethod? @relation(fields: [methodId], references: [id])
+  methodId    String?
+  tenantId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+model Category {
+  id    String   @id @default(uuid())
+  name  String
+  color String?
+  transactions Transaction[]
+  tenantId String
+}
+
+model PaymentMethod {
+  id    String   @id @default(uuid())
+  name  String
+  transactions Transaction[]
+  tenantId String
+}

@@ -14,7 +14,7 @@ async function main() {
     prisma.clientProfile.deleteMany(),
     prisma.employeeProfile.deleteMany(),
     prisma.authAccount.deleteMany(),
-    prisma.subscriptionPayment.deleteMany(),
+    // prisma.subscriptionPayment.deleteMany(), // Comentado para evitar erro se a tabela não existir
     prisma.tenant.deleteMany(),
     prisma.subscriptionPlan.deleteMany(),
   ]);
@@ -126,29 +126,9 @@ async function main() {
   });
 
   // Registrar pagamentos de assinatura
-  await prisma.subscriptionPayment.create({
-    data: {
-      tenantId: premiumTenant.id,
-      planId: premiumPlan.id,
-      amount: premiumPlan.price,
-      status: "completed",
-      paymentMethod: "credit_card",
-      transactionId: "tx_premium_001",
-      nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-    },
-  });
-
-  await prisma.subscriptionPayment.create({
-    data: {
-      tenantId: modeloTenant.id,
-      planId: proPlan.id,
-      amount: proPlan.price,
-      status: "completed",
-      paymentMethod: "credit_card",
-      transactionId: "tx_modelo_001",
-      nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-    },
-  });
+  // Remover ou comentar os blocos de criação de subscriptionPayment se não for mais necessário
+  // await prisma.subscriptionPayment.create({ ... });
+  // await prisma.subscriptionPayment.create({ ... });
 
   // Função para criar hash de senha
   const hashPassword = async (password) => {

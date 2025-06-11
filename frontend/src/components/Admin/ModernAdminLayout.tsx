@@ -17,6 +17,7 @@ import {
   Bell,
   Search,
   Package,
+  TrendingUp,
 } from "lucide-react";
 
 interface ModernAdminLayoutProps {
@@ -61,6 +62,13 @@ const ModernAdminLayout: React.FC<ModernAdminLayoutProps> = ({ children }) => {
       icon: Package,
       current: location.pathname === "/admin/servicos",
       description: "Serviços oferecidos",
+    },
+    {
+      name: "Financeiro",
+      href: "/admin/financeiro",
+      icon: TrendingUp,
+      current: location.pathname.startsWith("/admin/financeiro"),
+      description: "Gestão financeira",
     },
     {
       name: "WhatsApp",
