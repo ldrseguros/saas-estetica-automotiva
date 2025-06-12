@@ -67,7 +67,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
             </div>
             {duration && duration > 0 && (
               <div
-                className="flex items-center gap-1 text-blue-400"
+                className="flex items-center gap-1 text-slate-400"
                 title="Duração"
               >
                 <Clock size={16} />

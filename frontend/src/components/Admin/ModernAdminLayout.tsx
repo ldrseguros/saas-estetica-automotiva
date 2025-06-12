@@ -247,7 +247,7 @@ const Sidebar: React.FC<{
     <div className="flex flex-col h-full bg-gray-900">
       {/* Header */}
       <div className="flex items-center justify-between h-16 px-6 bg-gradient-to-r from-red-600 to-red-700">
-        <div className="flex items-center">
+        <div className="flex items-center my-3">
           <div className="h-10 w-10 bg-white/20 rounded-lg flex items-center justify-center">
             <Car className="h-6 w-6 text-white" />
           </div>

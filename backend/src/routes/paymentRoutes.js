@@ -4,6 +4,7 @@ import Stripe from "stripe";
 import protect from "../middlewares/authMiddleware.js";
 import { authorizeRoles } from "../middlewares/roleMiddleware.js";
 import dotenv from "dotenv";
+import { sendSubscriptionConfirmation } from "../services/emailService.js";
 
 dotenv.config();
 
@@ -58,70 +59,83 @@ try {
  * Criar uma sessão de checkout para assinatura
  * POST /api/payments/create-checkout-session
  */
-router.post("/create-checkout-session", async (req, res) => {
-  try {
-    const { planId, tenantId, successUrl, cancelUrl } = req.body;
+router.post(
+  "/create-checkout-session",
+  protect,
+  authorizeRoles("TENANT_ADMIN", "SUPER_ADMIN"),
+  async (req, res) => {
+    try {
+      const { planId, tenantId, successUrl, cancelUrl } = req.body;
 
-    // Verificar se o plano existe
-    const plan = await prisma.subscriptionPlan.findUnique({
-      where: { id: planId },
-    });
+      // Verificar se o plano existe
+      const plan = await prisma.subscriptionPlan.findUnique({
+        where: { id: planId },
+      });
 
-    if (!plan) {
-      return res.status(400).json({ message: "Plano não encontrado" });
-    }
+      if (!plan) {
+        return res.status(400).json({ message: "Plano não encontrado" });
+      }
 
-    // Verificar se o tenant existe
-    const tenant = await prisma.tenant.findUnique({
-      where: { id: tenantId },
-      select: {
-        id: true,
-        name: true,
-        contactEmail: true,
-      },
-    });
+      // Resolver tenantId - se for "current", usar o tenantId do usuário logado
+      const resolvedTenantId =
+        tenantId === "current" ? req.user.tenantId : tenantId;
 
-    if (!tenant) {
-      return res.status(400).json({ message: "Tenant não encontrado" });
-    }
+      if (!resolvedTenantId) {
+        return res.status(400).json({ message: "Tenant não identificado" });
+      }
 
-    // Criar um produto no Stripe para o plano (se não existir)
-    let stripeProductId = await getOrCreateStripeProduct(plan.name);
-
-    // Criar ou recuperar um preço no Stripe
-    const stripePriceId = await getOrCreateStripePrice(
-      stripeProductId,
-      plan.price,
-      plan.billingCycle
-    );
-
-    // Criar a sessão de checkout
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
-      line_items: [
-        {
-          price: stripePriceId,
-          quantity: 1,
+      // Verificar se o tenant existe
+      const tenant = await prisma.tenant.findUnique({
+        where: { id: resolvedTenantId },
+        select: {
+          id: true,
+          name: true,
+          contactEmail: true,
         },
-      ],
-      mode: "subscription",
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-      client_reference_id: tenantId,
-      customer_email: tenant.contactEmail,
-      metadata: {
-        tenantId,
-        planId,
-        planName: plan.name,
-      },
-    });
+      });
 
-    res.json({ sessionId: session.id, url: session.url });
-  } catch (error) {
-    console.error("Erro ao criar sessão de checkout:", error);
-    res.status(500).json({ message: "Erro ao criar sessão de checkout" });
+      if (!tenant) {
+        return res.status(400).json({ message: "Tenant não encontrado" });
+      }
+
+      // Criar um produto no Stripe para o plano (se não existir)
+      let stripeProductId = await getOrCreateStripeProduct(plan.name);
+
+      // Criar ou recuperar um preço no Stripe
+      const stripePriceId = await getOrCreateStripePrice(
+        stripeProductId,
+        plan.price,
+        plan.billingCycle
+      );
+
+      // Criar a sessão de checkout
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ["card"],
+        line_items: [
+          {
+            price: stripePriceId,
+            quantity: 1,
+          },
+        ],
+        mode: "subscription",
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+        client_reference_id: resolvedTenantId,
+        customer_email: tenant.contactEmail,
+        metadata: {
+          tenantId: resolvedTenantId,
+          planId,
+          planName: plan.name,
+        },
+      });
+
+      res.json({ sessionId: session.id, url: session.url });
+    } catch (error) {
+      console.error("Erro ao criar sessão de checkout:", error);
+      res.status(500).json({ message: "Erro ao criar sessão de checkout" });
+    }
   }
-});
+);
 
 /**
  * Webhook para eventos do Stripe
@@ -253,29 +267,170 @@ router.post(
         return res.status(404).json({ message: "Tenant não encontrado" });
       }
 
-      // Verificar se o tenant tem um customerId do Stripe
+      // Verificar se o tenant tem um customerId do Stripe válido
       let customerId = tenant.stripeCustomerId;
 
-      if (!customerId) {
-        return res.status(400).json({
-          message:
-            "Portal de pagamento não disponível. Este tenant está em período de teste ou não possui assinatura ativa.",
+      // Se não tem customerId ou se é um ID de teste inválido, criar um novo
+      if (!customerId || customerId.startsWith("cus_teste")) {
+        console.log("Criando novo customer no Stripe...");
+
+        const customer = await stripe.customers.create({
+          email: tenant.contactEmail,
+          name: tenant.name,
+          metadata: {
+            tenantId: tenant.id,
+          },
         });
+
+        customerId = customer.id;
+
+        // Atualizar o tenant com o novo customerId
+        await prisma.tenant.update({
+          where: { id: tenantId },
+          data: {
+            stripeCustomerId: customerId,
+          },
+        });
+
+        console.log(`Customer criado: ${customerId}`);
       }
 
-      // Criar a sessão do portal
-      const session = await stripe.billingPortal.sessions.create({
-        customer: customerId,
-        return_url: returnUrl,
-      });
+      // Criar ou obter configuração do portal
+      let portalConfiguration = await getOrCreatePortalConfiguration();
 
-      res.json({ url: session.url });
+      // Criar a sessão do portal
+      try {
+        const sessionParams = {
+          customer: customerId,
+          return_url: returnUrl,
+        };
+
+        // Só adicionar configuration se tiver um valor válido
+        if (portalConfiguration) {
+          sessionParams.configuration = portalConfiguration;
+        }
+
+        const session = await stripe.billingPortal.sessions.create(
+          sessionParams
+        );
+
+        res.json({ url: session.url });
+      } catch (stripeError) {
+        console.error("Erro específico do Stripe:", stripeError.message);
+
+        // Se ainda der erro, tentar criar uma configuração mais básica
+        if (
+          stripeError.message.includes("No configuration provided") ||
+          stripeError.message.includes("default configuration") ||
+          stripeError.message.includes("configuration")
+        ) {
+          try {
+            // Primeira tentativa: criar configuração básica
+            const basicConfig = await createBasicPortalConfiguration();
+
+            const sessionParams = {
+              customer: customerId,
+              return_url: returnUrl,
+            };
+
+            if (basicConfig) {
+              sessionParams.configuration = basicConfig;
+            }
+
+            const session = await stripe.billingPortal.sessions.create(
+              sessionParams
+            );
+            res.json({ url: session.url });
+          } catch (fallbackError) {
+            console.error("Erro no fallback:", fallbackError.message);
+
+            try {
+              // Última tentativa: sem configuração personalizada
+              console.log(
+                "Tentando criar portal sem configuração personalizada..."
+              );
+              const session = await stripe.billingPortal.sessions.create({
+                customer: customerId,
+                return_url: returnUrl,
+              });
+
+              res.json({ url: session.url });
+            } catch (finalError) {
+              console.error("Erro final:", finalError.message);
+
+              return res.status(200).json({
+                error: "portal_not_configured",
+                message:
+                  "Portal de gerenciamento não configurado. Entre em contato com o suporte.",
+                details:
+                  "O administrador precisa configurar o portal no Stripe Dashboard.",
+                configUrl:
+                  "https://dashboard.stripe.com/test/settings/billing/portal",
+              });
+            }
+          }
+        } else {
+          throw stripeError;
+        }
+      }
     } catch (error) {
       console.error("Erro ao criar portal do cliente:", error);
       res.status(500).json({ message: "Erro ao criar portal do cliente" });
     }
   }
 );
+
+// Função para obter ou criar configuração do portal
+async function getOrCreatePortalConfiguration() {
+  try {
+    // Listar configurações existentes
+    const configurations = await stripe.billingPortal.configurations.list({
+      limit: 10,
+    });
+
+    // Se já existe uma configuração, usar a primeira
+    if (configurations.data.length > 0) {
+      return configurations.data[0].id;
+    }
+
+    // Criar nova configuração
+    return await createBasicPortalConfiguration();
+  } catch (error) {
+    console.error("Erro ao obter configuração do portal:", error);
+    return null;
+  }
+}
+
+// Função para criar uma configuração básica do portal
+async function createBasicPortalConfiguration() {
+  try {
+    // Configuração mínima que funciona
+    const configuration = await stripe.billingPortal.configurations.create({
+      business_profile: {
+        headline: "Gerenciar Assinatura",
+      },
+      features: {
+        payment_method_update: { enabled: true },
+        invoice_history: { enabled: true },
+        customer_update: {
+          enabled: true,
+          allowed_updates: ["email"],
+        },
+        subscription_cancel: {
+          enabled: true,
+          mode: "at_period_end",
+        },
+      },
+    });
+
+    console.log("Configuração do portal criada:", configuration.id);
+    return configuration.id;
+  } catch (error) {
+    console.error("Erro ao criar configuração do portal:", error);
+    // Retornar null em caso de erro para não passar string vazia
+    return null;
+  }
+}
 
 // Função para obter ou criar um produto no Stripe
 async function getOrCreateStripeProduct(planName) {
@@ -374,6 +529,47 @@ async function handleCheckoutSessionCompleted(session) {
         description: `Assinatura criada via Stripe. ID da sessão: ${session.id}`,
       },
     });
+
+    // Enviar email de confirmação de assinatura
+    try {
+      const tenant = await prisma.tenant.findUnique({
+        where: { id: tenantId },
+        include: {
+          subscriptionPlan: true,
+        },
+      });
+
+      if (tenant && tenant.contactEmail && tenant.subscriptionPlan) {
+        const subscriptionData = {
+          ownerName: tenant.name,
+          planName: tenant.subscriptionPlan.name,
+          planPrice: tenant.subscriptionPlan.price.toFixed(2).replace(".", ","),
+          startDate: new Date().toLocaleDateString("pt-BR"),
+          nextBilling: new Date(
+            Date.now() + 30 * 24 * 60 * 60 * 1000
+          ).toLocaleDateString("pt-BR"),
+          maxEmployees: tenant.subscriptionPlan.maxEmployees,
+          maxClients: tenant.subscriptionPlan.maxClients,
+          dashboardUrl: `${
+            process.env.FRONTEND_URL || "http://localhost:8080"
+          }/admin/dashboard`,
+        };
+
+        await sendSubscriptionConfirmation(
+          tenant.contactEmail,
+          subscriptionData
+        );
+        console.log(
+          `📧 Email de confirmação de assinatura enviado para: ${tenant.contactEmail}`
+        );
+      }
+    } catch (emailError) {
+      console.error(
+        "Erro ao enviar email de confirmação de assinatura:",
+        emailError
+      );
+      // Não bloquear o fluxo se o email falhar
+    }
   } catch (error) {
     console.error("Erro ao processar checkout.session.completed:", error);
   }

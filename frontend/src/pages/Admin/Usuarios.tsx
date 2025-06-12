@@ -19,6 +19,8 @@ import ModernAdminLayout from "../../components/Admin/ModernAdminLayout";
 import { ModernCard, StatCard } from "../../components/Admin/ModernCard";
 import ModernButton from "../../components/Admin/ModernButton";
 import Pagination from "../../components/Pagination";
+import UserModal from "../../components/Admin/UserModal";
+import ConfirmDeleteModal from "../../components/Admin/ConfirmDeleteModal";
 import API from "../../lib/api";
 
 interface User {
@@ -41,8 +43,10 @@ const Usuarios: React.FC = () => {
   // Estado para edição de usuário
   const [editUser, setEditUser] = useState<User | null>(null);
   const [openEditModal, setOpenEditModal] = useState(false);
+  const [openCreateModal, setOpenCreateModal] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [actionMenuOpen, setActionMenuOpen] = useState<string | null>(null);
 
   const fetchUsersData = useCallback(
@@ -109,13 +113,17 @@ const Usuarios: React.FC = () => {
     if (!editUser) return;
 
     try {
+      setDeleteLoading(true);
       await API.delete(`/admin/users/${editUser.id}`);
       toast.success("Usuário excluído com sucesso");
       fetchUsersData(pagination.currentPage);
       setConfirmDelete(false);
+      setEditUser(null);
     } catch (error) {
       toast.error("Erro ao excluir usuário");
       console.error("Erro ao excluir usuário:", error);
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -124,12 +132,21 @@ const Usuarios: React.FC = () => {
 
     try {
       await API.put(`/admin/users/${editUser.id}`, data);
-      toast.success("Usuário atualizado com sucesso");
       fetchUsersData(pagination.currentPage);
       setOpenEditModal(false);
+      setEditUser(null);
     } catch (error) {
-      toast.error("Erro ao atualizar usuário");
-      console.error("Erro ao atualizar usuário:", error);
+      throw error;
+    }
+  };
+
+  const handleCreateUser = async (data: Partial<User>) => {
+    try {
+      await API.post("/admin/users", data);
+      fetchUsersData(pagination.currentPage);
+      setOpenCreateModal(false);
+    } catch (error) {
+      throw error;
     }
   };
 
@@ -179,12 +196,7 @@ const Usuarios: React.FC = () => {
             </p>
           </div>
           <div className="mt-4 lg:mt-0">
-            <ModernButton
-              icon={Plus}
-              onClick={() => {
-                /* TODO: Add user */
-              }}
-            >
+            <ModernButton icon={Plus} onClick={() => setOpenCreateModal(true)}>
               Novo Usuário
             </ModernButton>
           </div>
@@ -383,6 +395,37 @@ const Usuarios: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Modals */}
+      <UserModal
+        isOpen={openCreateModal}
+        onClose={() => setOpenCreateModal(false)}
+        onSave={handleCreateUser}
+        isEditing={false}
+      />
+
+      <UserModal
+        isOpen={openEditModal}
+        onClose={() => {
+          setOpenEditModal(false);
+          setEditUser(null);
+        }}
+        onSave={handleSaveEdit}
+        user={editUser}
+        isEditing={true}
+      />
+
+      <ConfirmDeleteModal
+        isOpen={confirmDelete}
+        onClose={() => {
+          setConfirmDelete(false);
+          setEditUser(null);
+        }}
+        onConfirm={confirmDeleteUser}
+        title="Excluir Usuário"
+        message={`Tem certeza que deseja excluir o usuário "${editUser?.name}"? Esta ação não pode ser desfeita.`}
+        loading={deleteLoading}
+      />
     </ModernAdminLayout>
   );
 };

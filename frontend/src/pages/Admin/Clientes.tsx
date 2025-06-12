@@ -16,6 +16,8 @@ import ModernAdminLayout from "../../components/Admin/ModernAdminLayout";
 import { ModernCard, StatCard } from "../../components/Admin/ModernCard";
 import ModernButton from "../../components/Admin/ModernButton";
 import Pagination from "../../components/Pagination";
+import ClientModal from "../../components/Admin/ClientModal";
+import ConfirmDeleteModal from "../../components/Admin/ConfirmDeleteModal";
 import API from "../../lib/api";
 
 interface Cliente {
@@ -38,8 +40,10 @@ const Clientes: React.FC = () => {
   // Estado para edição de cliente
   const [editCliente, setEditCliente] = useState<Cliente | null>(null);
   const [openEditModal, setOpenEditModal] = useState(false);
+  const [openCreateModal, setOpenCreateModal] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [actionMenuOpen, setActionMenuOpen] = useState<string | null>(null);
 
   const fetchClientes = useCallback(
@@ -101,32 +105,41 @@ const Clientes: React.FC = () => {
     if (!editCliente) return;
 
     try {
+      setDeleteLoading(true);
       await API.delete(`/admin/users/${editCliente.id}`);
       toast.success("Cliente excluído com sucesso");
       fetchClientes(pagination.currentPage);
       setConfirmDelete(false);
+      setEditCliente(null);
     } catch (error) {
       toast.error("Erro ao excluir cliente");
       console.error("Erro ao excluir cliente:", error);
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
   const handleSaveEdit = async (data: Partial<Cliente>) => {
     if (!editCliente) return;
 
-    try {
-      await API.put(`/admin/users/${editCliente.id}`, {
-        ...data,
-        role: "CLIENT",
-      });
+    await API.put(`/admin/users/${editCliente.id}`, {
+      ...data,
+      role: "CLIENT",
+    });
 
-      toast.success("Cliente atualizado com sucesso");
-      fetchClientes(pagination.currentPage);
-      setOpenEditModal(false);
-    } catch (error) {
-      toast.error("Erro ao atualizar cliente");
-      console.error("Erro ao atualizar cliente:", error);
-    }
+    fetchClientes(pagination.currentPage);
+    setOpenEditModal(false);
+    setEditCliente(null);
+  };
+
+  const handleCreateClient = async (data: Partial<Cliente>) => {
+    await API.post("/admin/users", {
+      ...data,
+      role: "CLIENT",
+    });
+
+    fetchClientes(pagination.currentPage);
+    setOpenCreateModal(false);
   };
 
   const formatDate = (dateString: string) => {
@@ -152,12 +165,7 @@ const Clientes: React.FC = () => {
             <p className="text-gray-600 mt-1">Gerencie sua base de clientes</p>
           </div>
           <div className="mt-4 lg:mt-0">
-            <ModernButton
-              icon={Plus}
-              onClick={() => {
-                /* TODO: Add client */
-              }}
-            >
+            <ModernButton icon={Plus} onClick={() => setOpenCreateModal(true)}>
               Novo Cliente
             </ModernButton>
           </div>
@@ -349,6 +357,37 @@ const Clientes: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Modals */}
+      <ClientModal
+        isOpen={openCreateModal}
+        onClose={() => setOpenCreateModal(false)}
+        onSave={handleCreateClient}
+        isEditing={false}
+      />
+
+      <ClientModal
+        isOpen={openEditModal}
+        onClose={() => {
+          setOpenEditModal(false);
+          setEditCliente(null);
+        }}
+        onSave={handleSaveEdit}
+        client={editCliente}
+        isEditing={true}
+      />
+
+      <ConfirmDeleteModal
+        isOpen={confirmDelete}
+        onClose={() => {
+          setConfirmDelete(false);
+          setEditCliente(null);
+        }}
+        onConfirm={confirmDeleteCliente}
+        title="Excluir Cliente"
+        message={`Tem certeza que deseja excluir o cliente "${editCliente?.name}"? Esta ação não pode ser desfeita.`}
+        loading={deleteLoading}
+      />
     </ModernAdminLayout>
   );
 };

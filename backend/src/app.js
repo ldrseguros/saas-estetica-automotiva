@@ -10,7 +10,10 @@ import serviceRoutes from "./routes/serviceRoutes.js"; // Importar as novas rota
 import vehicleRoutes from "./routes/vehicleRoutes.js"; // Importar as rotas de veículo (admin e client)
 import dashboardRoutes from "./routes/dashboardRoutes.js"; // Importar as rotas do dashboard
 import whatsappRoutes from "./routes/whatsappRoutes.js"; // Importar as rotas de WhatsApp
+import emailRoutes from "./routes/emailRoutes.js";
+import financialRoutes from "./routes/financialRoutes.js"; // Importar as rotas de email
 import settingsRoutes from "./routes/settingsRoutes.js"; // Importar as rotas de configurações
+import adminSubscriptionRoutes from "./routes/adminSubscriptionRoutes.js"; // Importar as rotas de planos para admin
 
 // Novas rotas para o SaaS
 import subscriptionRoutes from "./routes/subscriptionRoutes.js"; // Rotas para gerenciar assinaturas
@@ -58,7 +61,10 @@ app.use("/api/vehicles", vehicleRoutes); // Montar rotas de veículo (admin e cl
 app.use("/api/admin/users", userRoutes);
 app.use("/api/admin/dashboard", dashboardRoutes);
 app.use("/api/admin/whatsapp", whatsappRoutes);
+app.use("/api/admin/email", emailRoutes);
+app.use("/api/admin/financial", financialRoutes);
 app.use("/api/admin/settings", settingsRoutes);
+app.use("/api/admin/subscription-plans", adminSubscriptionRoutes);
 
 // Rotas de superadmin (gerenciamento do SaaS)
 app.use("/api/superadmin/tenants", tenantRoutes); // Gerenciamento de tenants

@@ -15,6 +15,7 @@ import {
   Star,
   ArrowUpRight,
   ExternalLink,
+  RefreshCw,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -27,12 +28,37 @@ import { paymentAPI } from "@/lib/api";
 interface SubscriptionStatus {
   status: "ACTIVE" | "PAST_DUE" | "CANCELED" | "TRIAL";
   plan: {
+    id: string;
     name: string;
     price: number;
     billingCycle: "monthly" | "yearly";
+    features: string[];
+    maxEmployees: number;
+    maxClients: number | null;
   } | null;
   trialEndsAt: string | null;
   subscriptionEndsAt: string | null;
+}
+
+interface PaymentHistory {
+  id: string;
+  date: string;
+  amount: number;
+  status: "PAID" | "PENDING" | "FAILED";
+  description: string;
+}
+
+interface PlanLimits {
+  employees: {
+    current: number;
+    limit: number;
+    canAdd: boolean;
+  };
+  clients: {
+    current: number;
+    limit: number | null;
+    canAdd: boolean;
+  };
 }
 
 const SubscriptionStatusPage = () => {
@@ -41,40 +67,117 @@ const SubscriptionStatusPage = () => {
   const [subscription, setSubscription] = useState<SubscriptionStatus | null>(
     null
   );
+  const [paymentHistory, setPaymentHistory] = useState<PaymentHistory[]>([]);
+  const [planLimits, setPlanLimits] = useState<PlanLimits | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loadingPortal, setLoadingPortal] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Simulating subscription data
   useEffect(() => {
-    const fetchSubscriptionStatus = async () => {
-      try {
-        // Buscar dados reais da API
-        const response = await paymentAPI.getSubscriptionStatus();
-        setSubscription(response);
-        setLoading(false);
-      } catch (err) {
-        console.error("Erro ao carregar status da assinatura:", err);
-        setError("Não foi possível carregar as informações da assinatura");
-        setLoading(false);
-      }
-    };
-
-    fetchSubscriptionStatus();
+    fetchSubscriptionData();
   }, []);
+
+  const fetchSubscriptionData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const [subscriptionResponse, limitsResponse] = await Promise.all([
+        paymentAPI.getSubscriptionStatus(),
+        paymentAPI.getPlanLimits(),
+      ]);
+
+      setSubscription(subscriptionResponse);
+      setPlanLimits(limitsResponse);
+
+      // Buscar histórico de pagamentos (simulado por enquanto)
+      const mockPayments: PaymentHistory[] = [
+        {
+          id: "1",
+          date: "2024-06-01T10:00:00Z",
+          amount: 99.9,
+          status: "PAID",
+          description: "Assinatura Mensal - Plano Básico",
+        },
+        {
+          id: "2",
+          date: "2024-05-01T10:00:00Z",
+          amount: 99.9,
+          status: "PAID",
+          description: "Assinatura Mensal - Plano Básico",
+        },
+        {
+          id: "3",
+          date: "2024-04-01T10:00:00Z",
+          amount: 99.9,
+          status: "PAID",
+          description: "Assinatura Mensal - Plano Básico",
+        },
+      ];
+      setPaymentHistory(mockPayments);
+    } catch (err) {
+      console.error("Erro ao carregar dados da assinatura:", err);
+      setError("Não foi possível carregar as informações da assinatura");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const refreshData = async () => {
+    setRefreshing(true);
+    await fetchSubscriptionData();
+    setRefreshing(false);
+    toast.success("Dados atualizados com sucesso!");
+  };
 
   const handleOpenCustomerPortal = async () => {
     setLoadingPortal(true);
     try {
       const returnUrl = `${window.location.origin}/admin/assinatura`;
       const data = await paymentAPI.createCustomerPortal(returnUrl);
+
+      if (data.error === "portal_not_configured") {
+        toast.error("Portal de Gerenciamento Indisponível", {
+          description:
+            data.details ||
+            "O sistema está sendo configurado. Tente novamente em alguns minutos.",
+          duration: 8000,
+        });
+        setLoadingPortal(false);
+        return;
+      }
+
+      // Se chegou aqui, o portal foi criado com sucesso
       window.location.href = data.url;
     } catch (err) {
       console.error("Erro ao abrir portal de gerenciamento:", err);
-      toast.error(
-        "Não foi possível acessar o portal de gerenciamento de assinatura"
-      );
+
+      // Tratamento mais específico de erros
+      const errorMessage = err.response?.data?.message || err.message;
+
+      if (
+        errorMessage.includes("portal") ||
+        errorMessage.includes("configuration")
+      ) {
+        toast.error("Portal Temporariamente Indisponível", {
+          description:
+            "O sistema de gerenciamento está sendo configurado. Tente novamente em alguns minutos.",
+          duration: 8000,
+        });
+      } else {
+        toast.error("Erro ao Acessar Portal", {
+          description:
+            "Não foi possível acessar o portal de gerenciamento. Tente novamente.",
+          duration: 5000,
+        });
+      }
+
       setLoadingPortal(false);
     }
+  };
+
+  const handleUpgrade = () => {
+    navigate("/admin/planos");
   };
 
   const getStatusInfo = () => {
@@ -118,7 +221,7 @@ const SubscriptionStatusPage = () => {
   };
 
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return "Não disponível";
+    if (!dateString) return "Indefinido";
     try {
       return format(parseISO(dateString), "dd 'de' MMMM 'de' yyyy", {
         locale: ptBR,
@@ -128,19 +231,19 @@ const SubscriptionStatusPage = () => {
     }
   };
 
+  const formatCurrency = (amount: number) => {
+    return amount.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
+  };
+
   const renderPlanFeatures = () => {
-    const features = [
-      "Agendamentos ilimitados",
-      "WhatsApp Business integrado",
-      "Relatórios avançados",
-      "Múltiplos funcionários",
-      "Backup automático",
-      "Suporte prioritário",
-    ];
+    if (!subscription?.plan?.features) return null;
 
     return (
       <div className="space-y-3">
-        {features.map((feature, index) => (
+        {subscription.plan.features.map((feature, index) => (
           <motion.div
             key={index}
             initial={{ opacity: 0, x: -20 }}
@@ -154,6 +257,62 @@ const SubscriptionStatusPage = () => {
             <span className="text-gray-700">{feature}</span>
           </motion.div>
         ))}
+      </div>
+    );
+  };
+
+  const renderPaymentHistory = () => {
+    return (
+      <div className="space-y-3">
+        {paymentHistory.slice(0, 5).map((payment) => (
+          <div
+            key={payment.id}
+            className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+          >
+            <div className="flex items-center space-x-3">
+              <div
+                className={`h-2 w-2 rounded-full ${
+                  payment.status === "PAID"
+                    ? "bg-green-500"
+                    : payment.status === "PENDING"
+                    ? "bg-yellow-500"
+                    : "bg-red-500"
+                }`}
+              ></div>
+              <div>
+                <p className="font-medium text-gray-900 text-sm">
+                  {formatDate(payment.date)}
+                </p>
+                <p className="text-xs text-gray-500">{payment.description}</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="font-medium text-gray-900 text-sm">
+                {formatCurrency(payment.amount)}
+              </p>
+              <p
+                className={`text-xs ${
+                  payment.status === "PAID"
+                    ? "text-green-600"
+                    : payment.status === "PENDING"
+                    ? "text-yellow-600"
+                    : "text-red-600"
+                }`}
+              >
+                {payment.status === "PAID"
+                  ? "Pago"
+                  : payment.status === "PENDING"
+                  ? "Pendente"
+                  : "Falhou"}
+              </p>
+            </div>
+          </div>
+        ))}
+        {paymentHistory.length === 0 && (
+          <p className="text-gray-500 text-center py-4">
+            Nenhum pagamento encontrado
+          </p>
+        )}
       </div>
     );
   };
@@ -188,7 +347,14 @@ const SubscriptionStatusPage = () => {
             <h3 className="text-lg font-semibold text-red-900 mb-2">
               Erro ao Carregar Assinatura
             </h3>
-            <p className="text-red-700">{error}</p>
+            <p className="text-red-700 mb-4">{error}</p>
+            <ModernButton
+              onClick={refreshData}
+              icon={RefreshCw}
+              variant="outline"
+            >
+              Tentar Novamente
+            </ModernButton>
           </div>
         </div>
       </ModernAdminLayout>
@@ -204,58 +370,57 @@ const SubscriptionStatusPage = () => {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col lg:flex-row lg:items-center lg:justify-between"
+          className="flex flex-col sm:flex-row sm:items-center sm:justify-between"
         >
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Assinatura</h1>
-            <p className="text-gray-600 mt-1">
+            <p className="mt-2 text-gray-600">
               Gerencie seu plano e pagamentos
             </p>
           </div>
-          <div className="mt-4 lg:mt-0 flex space-x-3">
+          <div className="mt-4 sm:mt-0 flex flex-col sm:flex-row gap-3">
             <ModernButton
               variant="outline"
-              icon={ExternalLink}
-              onClick={handleOpenCustomerPortal}
-              loading={loadingPortal}
+              onClick={refreshData}
+              disabled={refreshing}
+              icon={RefreshCw}
+              className={refreshing ? "animate-spin" : ""}
             >
-              Portal de Pagamento
+              {refreshing ? "Atualizando..." : "Atualizar"}
             </ModernButton>
-            <ModernButton icon={Crown}>Fazer Upgrade</ModernButton>
+            <ModernButton
+              onClick={handleOpenCustomerPortal}
+              disabled={loadingPortal}
+              icon={ExternalLink}
+            >
+              {loadingPortal ? "Abrindo..." : "Portal de Pagamento"}
+            </ModernButton>
+            <ModernButton
+              onClick={handleUpgrade}
+              icon={Zap}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Fazer Upgrade
+            </ModernButton>
           </div>
         </motion.div>
 
-        {/* Status Alert */}
-        {subscription?.status === "PAST_DUE" && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg p-4 text-white"
-          >
-            <div className="flex items-center space-x-3">
-              <AlertTriangle className="h-5 w-5" />
-              <div>
-                <h3 className="font-semibold">Pagamento Pendente</h3>
-                <p className="text-yellow-100 text-sm">
-                  Sua assinatura está com pagamento pendente. Atualize os dados
-                  de pagamento para continuar usando.
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Status Cards */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+        >
           <StatCard
             title="Status"
-            value={statusInfo?.label || "Indefinido"}
+            value={statusInfo?.label || "Carregando..."}
             icon={statusInfo?.icon || Settings}
             gradient={statusInfo?.gradient || "from-gray-500 to-gray-600"}
           />
           <StatCard
             title="Plano Atual"
-            value={subscription?.plan?.name || "Nenhum"}
+            value={subscription?.plan?.name || "Não definido"}
             icon={Crown}
             gradient="from-purple-500 to-purple-600"
           />
@@ -263,7 +428,7 @@ const SubscriptionStatusPage = () => {
             title="Valor Mensal"
             value={
               subscription?.plan
-                ? `R$ ${subscription.plan.price.toFixed(2)}`
+                ? formatCurrency(subscription.plan.price)
                 : "R$ 0,00"
             }
             icon={DollarSign}
@@ -272,14 +437,15 @@ const SubscriptionStatusPage = () => {
           <StatCard
             title="Renovação"
             value={
-              subscription?.subscriptionEndsAt ? "31 Dez 2024" : "Indefinido"
+              subscription?.subscriptionEndsAt
+                ? formatDate(subscription.subscriptionEndsAt)
+                : "Indefinido"
             }
             icon={CalendarIcon}
             gradient="from-blue-500 to-blue-600"
           />
-        </div>
+        </motion.div>
 
-        {/* Plan Details */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Current Plan */}
           <ModernCard
@@ -297,7 +463,7 @@ const SubscriptionStatusPage = () => {
                         {subscription.plan.name}
                       </h3>
                       <p className="text-red-100">
-                        R$ {subscription.plan.price.toFixed(2)}/
+                        {formatCurrency(subscription.plan.price)}/
                         {subscription.plan.billingCycle === "monthly"
                           ? "mês"
                           : "ano"}
@@ -314,6 +480,31 @@ const SubscriptionStatusPage = () => {
                 </h4>
                 {renderPlanFeatures()}
               </div>
+
+              {/* Limites do Plano */}
+              {planLimits && (
+                <div className="pt-4 border-t border-gray-200">
+                  <h4 className="font-semibold text-gray-900 mb-3">
+                    Uso Atual
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Funcionários</span>
+                      <span className="font-medium">
+                        {planLimits.employees.current} /{" "}
+                        {planLimits.employees.limit}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Clientes</span>
+                      <span className="font-medium">
+                        {planLimits.clients.current} /{" "}
+                        {planLimits.clients.limit || "∞"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </ModernCard>
 
@@ -324,88 +515,79 @@ const SubscriptionStatusPage = () => {
             icon={CreditCard}
             hoverable={false}
           >
-            <div className="space-y-3">
-              {[
-                { date: "2024-06-01", amount: 199.9, status: "Pago" },
-                { date: "2024-05-01", amount: 199.9, status: "Pago" },
-                { date: "2024-04-01", amount: 199.9, status: "Pago" },
-              ].map((payment, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="h-8 w-8 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center">
-                      <CheckCircle className="h-4 w-4 text-white" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        {format(parseISO(payment.date), "dd MMM yyyy", {
-                          locale: ptBR,
-                        })}
-                      </p>
-                      <p className="text-sm text-gray-600">{payment.status}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-gray-900">
-                      R$ {payment.amount.toFixed(2)}
-                    </p>
-                  </div>
-                </motion.div>
-              ))}
+            {renderPaymentHistory()}
 
-              <ModernButton variant="ghost" className="w-full mt-4">
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <ModernButton
+                variant="outline"
+                onClick={handleOpenCustomerPortal}
+                disabled={loadingPortal}
+                className="w-full"
+                icon={ExternalLink}
+              >
                 Ver Todos os Pagamentos
               </ModernButton>
             </div>
           </ModernCard>
         </div>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Action Cards */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="grid grid-cols-1 md:grid-cols-3 gap-6"
+        >
           <ModernCard
             title="Alterar Plano"
             description="Faça upgrade ou downgrade"
             icon={Zap}
-            onClick={() => navigate("/upgrade")}
-            className="cursor-pointer hover:shadow-lg transition-shadow"
+            hoverable
           >
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Ver opções</span>
-              <ArrowUpRight className="h-4 w-4 text-gray-400" />
-            </div>
+            <ModernButton
+              onClick={handleUpgrade}
+              className="w-full"
+              icon={ArrowUpRight}
+            >
+              Ver opções
+            </ModernButton>
           </ModernCard>
 
           <ModernCard
             title="Atualizar Pagamento"
             description="Alterar cartão de crédito"
             icon={CreditCard}
-            onClick={handleOpenCustomerPortal}
-            className="cursor-pointer hover:shadow-lg transition-shadow"
+            hoverable
           >
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Portal de pagamento</span>
-              <ExternalLink className="h-4 w-4 text-gray-400" />
-            </div>
+            <ModernButton
+              onClick={handleOpenCustomerPortal}
+              disabled={loadingPortal}
+              variant="outline"
+              className="w-full"
+              icon={ExternalLink}
+            >
+              Portal de pagamento
+            </ModernButton>
           </ModernCard>
 
           <ModernCard
             title="Suporte"
             description="Precisa de ajuda?"
             icon={Shield}
-            onClick={() => window.open("mailto:suporte@exemplo.com")}
-            className="cursor-pointer hover:shadow-lg transition-shadow"
+            hoverable
           >
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Entrar em contato</span>
-              <ArrowUpRight className="h-4 w-4 text-gray-400" />
-            </div>
+            <ModernButton
+              onClick={() =>
+                window.open("mailto:suporte@saasestetica.com", "_blank")
+              }
+              variant="outline"
+              className="w-full"
+              icon={ExternalLink}
+            >
+              Entrar em contato
+            </ModernButton>
           </ModernCard>
-        </div>
+        </motion.div>
       </div>
     </ModernAdminLayout>
   );

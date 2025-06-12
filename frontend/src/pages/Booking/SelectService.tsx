@@ -165,7 +165,7 @@ const SelectService: React.FC = () => {
                     {formatCurrency(service.price)}
                   </p>
                   {service.duration && service.duration > 0 && (
-                    <p className="text-blue-400 font-medium">
+                    <p className="text-slate-400 font-medium">
                       {formatDuration(service.duration)}
                     </p>
                   )}

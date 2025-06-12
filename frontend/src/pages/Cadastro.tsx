@@ -615,7 +615,7 @@ const Cadastro = () => {
                       />
 
                       <div className="bg-gray-50 p-4 rounded-lg">
-                        <h3 className="text-lg font-medium mb-2">
+                        <h3 className="text-lg font-medium mb-2 text-black">
                           Detalhes do Plano Selecionado
                         </h3>
                         {form.watch("planId") ? (
@@ -624,11 +624,13 @@ const Cadastro = () => {
                               .filter((p) => p.id === form.watch("planId"))
                               .map((plan) => (
                                 <div key={plan.id}>
-                                  <p className="font-semibold">{plan.name}</p>
+                                  <p className="font-semibold text-black/80">
+                                    {plan.name}
+                                  </p>
                                   <p className="text-gray-600">
                                     {plan.description}
                                   </p>
-                                  <p className="text-lg font-bold mt-2">
+                                  <p className="text-lg font-bold mt-2 text-green-600/90">
                                     R$ {plan.price.toFixed(2)}/
                                     {plan.billingCycle === "monthly"
                                       ? "mês"

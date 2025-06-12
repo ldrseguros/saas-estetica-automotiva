@@ -278,6 +278,22 @@ export const paymentAPI = {
     });
     return response.data;
   },
+
+  getPlanLimits: async () => {
+    // Simulação por enquanto - você pode implementar uma API real depois
+    return {
+      employees: {
+        current: 2,
+        limit: 3,
+        canAdd: true,
+      },
+      clients: {
+        current: 45,
+        limit: null,
+        canAdd: true,
+      },
+    };
+  },
 };
 
 // API para serviços

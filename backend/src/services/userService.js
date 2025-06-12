@@ -11,9 +11,77 @@ const transformAccountToUser = (account) => {
     role: account.role,
     name: account.employee?.name || account.client?.name || "Sem nome",
     whatsapp: account.client?.whatsapp,
+    phone: account.employee?.phone,
+    position: account.employee?.position,
     createdAt: account.createdAt,
     updatedAt: account.updatedAt,
   };
+};
+
+export const createNewUser = async (userData) => {
+  const { email, name, role, password, phone, position, whatsapp, tenantId } =
+    userData;
+
+  // Verificar se o email já está em uso
+  const existingAccount = await prisma.authAccount.findUnique({
+    where: { email },
+  });
+
+  if (existingAccount) {
+    const error = new Error("Este email já está em uso");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // Hash da senha
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  // Criar conta e perfil em transação
+  return await prisma.$transaction(async (tx) => {
+    const account = await tx.authAccount.create({
+      data: {
+        email,
+        password: hashedPassword,
+        role,
+        tenantId,
+      },
+    });
+
+    if (role === "CLIENT") {
+      await tx.clientProfile.create({
+        data: {
+          accountId: account.id,
+          name,
+          whatsapp: whatsapp || null,
+        },
+      });
+    } else if (["TENANT_ADMIN", "EMPLOYEE", "SUPER_ADMIN"].includes(role)) {
+      await tx.employeeProfile.create({
+        data: {
+          accountId: account.id,
+          name,
+          phone: phone || null,
+          position: position || null,
+        },
+      });
+    }
+
+    // Buscar o usuário criado com os perfis
+    const createdAccount = await tx.authAccount.findUnique({
+      where: { id: account.id },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+        employee: { select: { name: true, phone: true, position: true } },
+        client: { select: { name: true, whatsapp: true } },
+      },
+    });
+
+    return transformAccountToUser(createdAccount);
+  });
 };
 
 export const fetchAllUsers = async (filters, pagination) => {
@@ -43,7 +111,7 @@ export const fetchAllUsers = async (filters, pagination) => {
       role: true,
       createdAt: true,
       updatedAt: true,
-      employee: { select: { name: true } },
+      employee: { select: { name: true, phone: true, position: true } },
       client: { select: { name: true, whatsapp: true } },
     },
     orderBy: { createdAt: "desc" },
@@ -74,7 +142,7 @@ export const fetchUserById = async (id) => {
       role: true,
       createdAt: true,
       updatedAt: true,
-      employee: { select: { name: true } },
+      employee: { select: { name: true, phone: true, position: true } },
       client: { select: { name: true, whatsapp: true } },
     },
   });
@@ -88,7 +156,7 @@ export const fetchUserById = async (id) => {
 };
 
 export const modifyUser = async (id, userData) => {
-  const { email, name, role, password, whatsapp } = userData;
+  const { email, name, role, password, whatsapp, phone, position } = userData;
 
   const accountToUpdate = await prisma.authAccount.findUnique({
     where: { id },
@@ -116,24 +184,36 @@ export const modifyUser = async (id, userData) => {
       // If role changes to CLIENT or is CLIENT and name/whatsapp changes
       await tx.clientProfile.upsert({
         where: { accountId: id },
-        update: { name, whatsapp: whatsapp !== undefined ? whatsapp : null },
+        update: {
+          name,
+          whatsapp: whatsapp !== undefined ? whatsapp : null,
+        },
         create: {
           accountId: id,
           name,
           whatsapp: whatsapp !== undefined ? whatsapp : null,
         },
       });
-      // If the user was an employee, their employee profile should be disassociated or deleted
-      // For simplicity, we are not handling role *changes* from Employee to Client that require deleting old profile.
-      // This logic assumes if role is CLIENT, we operate on ClientProfile.
+      // Remove employee profile if exists
+      await tx.employeeProfile.deleteMany({ where: { accountId: id } });
     } else if (["TENANT_ADMIN", "EMPLOYEE", "SUPER_ADMIN"].includes(role)) {
       // If role changes to TENANT_ADMIN/EMPLOYEE/SUPER_ADMIN or is any of these roles and name changes
       await tx.employeeProfile.upsert({
         where: { accountId: id },
-        update: { name },
-        create: { accountId: id, name },
+        update: {
+          name,
+          phone: phone !== undefined ? phone : null,
+          position: position !== undefined ? position : null,
+        },
+        create: {
+          accountId: id,
+          name,
+          phone: phone !== undefined ? phone : null,
+          position: position !== undefined ? position : null,
+        },
       });
-      // Similarly, if user was Client, ClientProfile might need cleanup if role changes.
+      // Remove client profile if exists
+      await tx.clientProfile.deleteMany({ where: { accountId: id } });
     }
 
     // Fetch and return the updated user details
@@ -143,9 +223,9 @@ export const modifyUser = async (id, userData) => {
         id: true,
         email: true,
         role: true,
-        createdAt: true, // It's good practice to return consistent fields
+        createdAt: true,
         updatedAt: true,
-        employee: { select: { name: true } },
+        employee: { select: { name: true, phone: true, position: true } },
         client: { select: { name: true, whatsapp: true } },
       },
     });

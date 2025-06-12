@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import ModernAdminLayout from "@/components/Admin/ModernAdminLayout";
 import { ModernCard, StatCard } from "@/components/Admin/ModernCard";
 import ModernButton from "@/components/Admin/ModernButton";
+import ConfigurationsTab from "@/components/Admin/WhatsApp/ConfigurationsTab";
 
 interface Template {
   id: string;
@@ -742,25 +743,220 @@ const WhatsAppPage: React.FC = () => {
             {activeTab === "dashboard" && renderDashboard()}
             {activeTab === "templates" && renderTemplates()}
             {activeTab === "send" && (
-              <ModernCard
-                title="Enviar Mensagens"
-                description="Função em desenvolvimento"
-              >
-                <p className="text-gray-500">
-                  Esta funcionalidade será implementada em breve.
-                </p>
-              </ModernCard>
+              <div className="space-y-6">
+                <ModernCard
+                  title="Enviar Mensagens"
+                  description="Envie mensagens individuais ou em massa para seus clientes"
+                >
+                  <div className="space-y-6">
+                    {/* Tipo de Envio */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-3">
+                        Tipo de Envio
+                      </label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <button
+                          type="button"
+                          className={`p-4 border-2 rounded-lg text-left transition-colors ${
+                            sendMessageData.clientId === "individual"
+                              ? "border-red-500 bg-red-50 text-red-900"
+                              : "border-gray-200 hover:border-gray-300"
+                          }`}
+                          onClick={() =>
+                            setSendMessageData((prev) => ({
+                              ...prev,
+                              clientId: "individual",
+                            }))
+                          }
+                        >
+                          <div className="flex items-center space-x-3">
+                            <Users className="h-5 w-5 text-red-600" />
+                            <div>
+                              <div className="font-medium">Individual</div>
+                              <div className="text-sm text-gray-500">
+                                Enviar para um cliente específico
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+
+                        <button
+                          type="button"
+                          className={`p-4 border-2 rounded-lg text-left transition-colors ${
+                            sendMessageData.clientId === "mass"
+                              ? "border-red-500 bg-red-50 text-red-900"
+                              : "border-gray-200 hover:border-gray-300"
+                          }`}
+                          onClick={() =>
+                            setSendMessageData((prev) => ({
+                              ...prev,
+                              clientId: "mass",
+                            }))
+                          }
+                        >
+                          <div className="flex items-center space-x-3">
+                            <Zap className="h-5 w-5 text-red-600" />
+                            <div>
+                              <div className="font-medium">Em Massa</div>
+                              <div className="text-sm text-gray-500">
+                                Enviar para todos os clientes
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Seleção de Cliente (Individual) */}
+                    {sendMessageData.clientId === "individual" && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Selecionar Cliente
+                        </label>
+                        <select
+                          value={sendMessageData.clientId}
+                          onChange={(e) =>
+                            setSendMessageData((prev) => ({
+                              ...prev,
+                              clientId: e.target.value,
+                            }))
+                          }
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                        >
+                          <option value="individual">
+                            Selecione um cliente...
+                          </option>
+                          {clients.map((client) => (
+                            <option key={client.id} value={client.id}>
+                              {client.name} - {client.whatsapp}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {/* Template ou Mensagem Personalizada */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Usar Template
+                      </label>
+                      <select
+                        onChange={(e) => {
+                          const selectedTemplate = templates.find(
+                            (t) => t.id === e.target.value
+                          );
+                          if (selectedTemplate) {
+                            setSendMessageData((prev) => ({
+                              ...prev,
+                              message: selectedTemplate.message,
+                            }));
+                          }
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                      >
+                        <option value="">Ou escolha um template...</option>
+                        {templates.map((template) => (
+                          <option key={template.id} value={template.id}>
+                            {template.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Mensagem */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Mensagem
+                      </label>
+                      <textarea
+                        rows={6}
+                        value={sendMessageData.message}
+                        onChange={(e) =>
+                          setSendMessageData((prev) => ({
+                            ...prev,
+                            message: e.target.value,
+                          }))
+                        }
+                        placeholder="Digite sua mensagem..."
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Use {"{client_name}"}, {"{service_name}"}, {"{date}"},{" "}
+                        {"{time}"} para personalizar
+                      </p>
+                    </div>
+
+                    {/* Preview */}
+                    {sendMessageData.message && (
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <h4 className="font-medium text-gray-900 mb-2">
+                          Preview da Mensagem
+                        </h4>
+                        <div className="bg-white p-3 rounded-lg border max-w-xs">
+                          <p className="text-sm whitespace-pre-wrap">
+                            {sendMessageData.message.replace(
+                              /\{(\w+)\}/g,
+                              (match, key) => {
+                                const replacements: Record<string, string> = {
+                                  client_name: "João Silva",
+                                  service_name: "Enceramento",
+                                  date: "15/01/2024",
+                                  time: "14:00",
+                                };
+                                return replacements[key] || match;
+                              }
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Botões de Ação */}
+                    <div className="flex space-x-3">
+                      <ModernButton
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => {
+                          setSendMessageData({
+                            clientId: "",
+                            message: "",
+                          });
+                        }}
+                      >
+                        Limpar
+                      </ModernButton>
+                      <ModernButton
+                        className="flex-1"
+                        onClick={sendMessage}
+                        disabled={
+                          !sendMessageData.message.trim() ||
+                          (sendMessageData.clientId !== "mass" &&
+                            sendMessageData.clientId !== "individual" &&
+                            !sendMessageData.clientId)
+                        }
+                        icon={Send}
+                      >
+                        Enviar Mensagem
+                      </ModernButton>
+                    </div>
+
+                    {/* Estatísticas */}
+                    {sendMessageData.clientId === "mass" && (
+                      <div className="bg-blue-50 p-4 rounded-lg">
+                        <div className="flex items-center space-x-2">
+                          <Users className="h-5 w-5 text-blue-600" />
+                          <span className="font-medium text-blue-900">
+                            Será enviado para {clients.length} clientes com
+                            WhatsApp
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </ModernCard>
+              </div>
             )}
-            {activeTab === "settings" && (
-              <ModernCard
-                title="Configurações"
-                description="Configurações do WhatsApp Business"
-              >
-                <p className="text-gray-500">
-                  Esta funcionalidade será implementada em breve.
-                </p>
-              </ModernCard>
-            )}
+            {activeTab === "settings" && <ConfigurationsTab />}
           </motion.div>
         </AnimatePresence>
 

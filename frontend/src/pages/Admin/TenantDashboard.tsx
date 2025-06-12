@@ -47,11 +47,20 @@ interface UpcomingBooking {
   }>;
 }
 
+interface FinancialData {
+  revenueToday: number;
+  revenueThisWeek: number;
+  revenueThisMonth: number;
+  expensesThisMonth: number;
+  netProfitThisMonth: number;
+}
+
 interface DashboardData {
   stats: DashboardStats;
   upcomingBookings: UpcomingBooking[];
   totalClients: number;
   totalServices: number;
+  financial: FinancialData;
 }
 
 // Definir tipo para o retorno da API de agendamentos
@@ -189,11 +198,45 @@ const TenantDashboard = () => {
         const allServices = await servicesResponse.json();
         const totalServices = allServices.length;
 
+        // Buscar dados financeiros
+        let financial: FinancialData = {
+          revenueToday: 0,
+          revenueThisWeek: 0,
+          revenueThisMonth: 0,
+          expensesThisMonth: 0,
+          netProfitThisMonth: 0,
+        };
+
+        try {
+          const financialResponse = await fetch(
+            "/api/admin/financial/summary",
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+
+          if (financialResponse.ok) {
+            const financialData = await financialResponse.json();
+            financial = financialData;
+          } else {
+            console.warn(
+              "Dados financeiros não disponíveis, usando valores padrão"
+            );
+          }
+        } catch (financialError) {
+          console.warn("Erro ao buscar dados financeiros:", financialError);
+          // Usar valores padrão em caso de erro
+        }
+
         setDashboardData({
           stats,
           upcomingBookings,
           totalClients,
           totalServices,
+          financial,
         });
       } catch (error) {
         console.error("Erro ao carregar dados do dashboard:", error);
@@ -233,7 +276,7 @@ const TenantDashboard = () => {
       case "CANCELLED":
         return "bg-red-100 text-red-800";
       case "COMPLETED":
-        return "bg-blue-100 text-blue-800";
+        return "bg-green-100 text-green-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -479,7 +522,7 @@ const TenantDashboard = () => {
           />
           <StatCard
             title="Receita Hoje"
-            value={formatCurrency(calculateTotalRevenue())}
+            value={formatCurrency(dashboardData?.financial.revenueToday || 0)}
             change="+15%"
             changeType="positive"
             icon={DollarSign}
@@ -508,19 +551,31 @@ const TenantDashboard = () => {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Este mês</span>
                 <span className="text-2xl font-bold text-gray-900">
-                  {formatCurrency(calculateTotalRevenue())}
+                  {formatCurrency(
+                    dashboardData?.financial.revenueThisMonth || 0
+                  )}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Esta semana</span>
                 <span className="text-lg font-semibold text-gray-700">
-                  {formatCurrency(calculateTotalRevenue() * 0.7)}
+                  {formatCurrency(
+                    dashboardData?.financial.revenueThisWeek || 0
+                  )}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Hoje</span>
                 <span className="text-lg font-semibold text-gray-700">
-                  {formatCurrency(calculateTotalRevenue() * 0.1)}
+                  {formatCurrency(dashboardData?.financial.revenueToday || 0)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+                <span className="text-sm text-gray-600">Lucro líquido</span>
+                <span className="text-lg font-semibold text-green-600">
+                  {formatCurrency(
+                    dashboardData?.financial.netProfitThisMonth || 0
+                  )}
                 </span>
               </div>
             </div>

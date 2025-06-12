@@ -96,12 +96,12 @@ const ServiceTable: React.FC<ServiceTableProps> = ({
                     {formatCurrency(service.price)}
                   </div>
                 </TableCell>
-                <TableCell className="text-right text-blue-400">
+                <TableCell className="text-right text-slate-400">
                   <div className="flex items-center justify-end gap-1">
                     <Clock className="h-4 w-4" />
                     <Badge
                       variant="outline"
-                      className="bg-blue-900/20 border-blue-500/30 text-blue-400 font-medium px-2"
+                      className="bg-slate-900/20 border-slate-500/30 text-slate-400 font-medium px-2"
                     >
                       {formatDuration(service.duration)}
                     </Badge>

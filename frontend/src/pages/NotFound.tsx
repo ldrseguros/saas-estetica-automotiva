@@ -9,6 +9,8 @@ const NotFound = () => {
       "404 Error: User attempted to access non-existent route:",
       location.pathname
     );
+    console.error("Full location object:", location);
+    console.error("Stack trace:", new Error().stack);
   }, [location.pathname]);
 
   return (

@@ -305,11 +305,14 @@ const ServicesPage = () => {
   };
 
   const formatDuration = (minutes: number) => {
-    if (minutes < 60) {
-      return `${minutes}min`;
+    // Arredondar para evitar muitas casas decimais
+    const roundedMinutes = Math.round(minutes);
+
+    if (roundedMinutes < 60) {
+      return `${roundedMinutes}min`;
     }
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
+    const hours = Math.floor(roundedMinutes / 60);
+    const remainingMinutes = roundedMinutes % 60;
     return remainingMinutes > 0
       ? `${hours}h ${remainingMinutes}min`
       : `${hours}h`;
@@ -320,9 +323,13 @@ const ServicesPage = () => {
     const averagePrice =
       services.reduce((sum, service) => sum + service.price, 0) /
       (services.length || 1);
-    const averageDuration =
-      services.reduce((sum, service) => sum + service.duration, 0) /
-      (services.length || 1);
+
+    // Calcular duração média e arredondar para número inteiro
+    const totalDuration = services.reduce(
+      (sum, service) => sum + service.duration,
+      0
+    );
+    const averageDuration = Math.round(totalDuration / (services.length || 1));
 
     return {
       totalServices,
