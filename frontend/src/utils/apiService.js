@@ -30,6 +30,12 @@ API.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
       console.log("Added Authorization header:", config.headers.Authorization);
     }
+
+    // Adicionar x-tenant-id para rotas que precisam (principalmente serviços públicos)
+    if (user.tenantId) {
+      config.headers["x-tenant-id"] = user.tenantId;
+      console.log("Added x-tenant-id header:", config.headers["x-tenant-id"]);
+    }
     return config;
   },
   (error) => {

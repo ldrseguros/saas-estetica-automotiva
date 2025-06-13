@@ -130,24 +130,16 @@ const Usuarios: React.FC = () => {
   const handleSaveEdit = async (data: Partial<User>) => {
     if (!editUser) return;
 
-    try {
-      await API.put(`/admin/users/${editUser.id}`, data);
-      fetchUsersData(pagination.currentPage);
-      setOpenEditModal(false);
-      setEditUser(null);
-    } catch (error) {
-      throw error;
-    }
+    await API.put(`/admin/users/${editUser.id}`, data);
+    fetchUsersData(pagination.currentPage);
+    setOpenEditModal(false);
+    setEditUser(null);
   };
 
   const handleCreateUser = async (data: Partial<User>) => {
-    try {
-      await API.post("/admin/users", data);
-      fetchUsersData(pagination.currentPage);
-      setOpenCreateModal(false);
-    } catch (error) {
-      throw error;
-    }
+    await API.post("/admin/users", data);
+    fetchUsersData(pagination.currentPage);
+    setOpenCreateModal(false);
   };
 
   const formatDate = (dateString: string) => {
@@ -221,14 +213,6 @@ const Usuarios: React.FC = () => {
             value={employeeCount}
             icon={User}
             gradient="from-green-500 to-green-600"
-          />
-          <StatCard
-            title="Novos Este Mês"
-            value="3"
-            change="+2 desde o mês passado"
-            changeType="positive"
-            icon={UserCheck}
-            gradient="from-purple-500 to-purple-600"
           />
         </div>
 

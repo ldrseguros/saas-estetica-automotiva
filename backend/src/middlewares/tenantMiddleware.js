@@ -74,36 +74,45 @@ export const requireTenantAccess = async (req, res, next) => {
       return next();
     }
 
-    // Verificar se o tenant foi identificado
-    if (!req.tenant) {
-      return res.status(400).json({ message: "Tenant não identificado" });
+    // Para usuários comuns, identificar tenant através do tenantId do usuário
+    if (!req.user.tenantId) {
+      return res
+        .status(400)
+        .json({ message: "Usuário não está associado a nenhum tenant" });
     }
 
-    // Verificar se o usuário pertence ao tenant
-    if (req.user.tenantId !== req.tenant.id) {
-      return res.status(403).json({ message: "Acesso negado a este tenant" });
+    // Buscar informações do tenant do usuário
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: req.user.tenantId },
+    });
+
+    if (!tenant) {
+      return res.status(404).json({ message: "Tenant não encontrado" });
     }
+
+    // Adicionar tenant ao request
+    req.tenant = tenant;
 
     // Verificar se o tenant está ativo
-    if (!req.tenant.isActive) {
+    if (!tenant.isActive) {
       return res.status(403).json({ message: "Este tenant está inativo" });
     }
 
     // Verificar status da assinatura
     if (
-      req.tenant.subscriptionStatus === "EXPIRED" ||
-      req.tenant.subscriptionStatus === "CANCELED"
+      tenant.subscriptionStatus === "EXPIRED" ||
+      tenant.subscriptionStatus === "CANCELED"
     ) {
       return res.status(402).json({
         message: "Assinatura expirada ou cancelada",
-        subscriptionStatus: req.tenant.subscriptionStatus,
+        subscriptionStatus: tenant.subscriptionStatus,
       });
     }
 
     next();
   } catch (error) {
     console.error("Erro ao verificar acesso ao tenant:", error);
-    next(error);
+    res.status(500).json({ message: "Erro interno do servidor" });
   }
 };
 

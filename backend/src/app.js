@@ -62,6 +62,10 @@ app.use("/api/admin/users", userRoutes);
 app.use("/api/admin/dashboard", dashboardRoutes);
 app.use("/api/admin/whatsapp", whatsappRoutes);
 app.use("/api/admin/email", emailRoutes);
+
+// Import da nova rota de automação
+import emailAutomationRoutes from "./routes/emailAutomationRoutes.js";
+app.use("/api/admin/email-automation", emailAutomationRoutes);
 app.use("/api/admin/financial", financialRoutes);
 app.use("/api/admin/settings", settingsRoutes);
 app.use("/api/admin/subscription-plans", adminSubscriptionRoutes);

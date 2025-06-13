@@ -279,20 +279,41 @@ export const paymentAPI = {
     return response.data;
   },
 
+  getPaymentHistory: async (params = {}) => {
+    const response = await api.get("/payments/history", { params });
+    return response.data;
+  },
+
+  getPaymentStats: async () => {
+    const response = await api.get("/payments/stats");
+    return response.data;
+  },
+
+  getLastPayment: async () => {
+    const response = await api.get("/payments/last");
+    return response.data;
+  },
+
+  getNextBillingDate: async () => {
+    const response = await api.get("/payments/next-billing");
+    return response.data;
+  },
+
+  createPaymentRecord: async (data: {
+    planId: string;
+    amount: number;
+    status?: string;
+    paymentMethod?: string;
+    transactionId?: string;
+    nextBillingDate?: string;
+  }) => {
+    const response = await api.post("/payments/record", data);
+    return response.data;
+  },
+
   getPlanLimits: async () => {
-    // Simulação por enquanto - você pode implementar uma API real depois
-    return {
-      employees: {
-        current: 2,
-        limit: 3,
-        canAdd: true,
-      },
-      clients: {
-        current: 45,
-        limit: null,
-        canAdd: true,
-      },
-    };
+    const response = await api.get("/payments/plan-limits");
+    return response.data;
   },
 };
 

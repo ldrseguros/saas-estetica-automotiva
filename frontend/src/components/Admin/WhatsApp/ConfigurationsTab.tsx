@@ -287,7 +287,7 @@ const ConfigurationsTab: React.FC = () => {
                   {testResult.message}
                 </span>
               </div>
-              <pre className="text-xs bg-white p-2 rounded border overflow-auto">
+              <pre className="text-xs bg-white p-2 rounded border overflow-auto text-green-800">
                 {JSON.stringify(testResult.details, null, 2)}
               </pre>
             </div>

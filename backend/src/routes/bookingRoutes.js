@@ -1,6 +1,7 @@
 import express from "express";
 import { protect } from "../middlewares/authMiddleware.js";
 import { authorizeRoles } from "../middlewares/roleMiddleware.js";
+import { requireTenantAccess } from "../middlewares/tenantMiddleware.js";
 import {
   // Admin functions
   getAllBookingsAdmin,
@@ -8,6 +9,8 @@ import {
   getBookingByIdAdmin,
   updateBookingAdmin,
   deleteBookingAdmin,
+  cancelBookingAdmin,
+  completeBookingAdmin,
   // Client functions
   getMyBookings,
   createMyBooking,
@@ -26,15 +29,52 @@ router.get("/available-slots", getAvailableTimeSlots);
 // --- Admin routes for managing all bookings ---
 router
   .route("/admin")
-  .all(protect, authorizeRoles("TENANT_ADMIN", "SUPER_ADMIN"))
+  .all(
+    protect,
+    requireTenantAccess,
+    authorizeRoles("TENANT_ADMIN", "SUPER_ADMIN")
+  )
   .get(getAllBookingsAdmin)
   .post(createBookingAdmin);
 
 router
   .route("/admin/:id")
-  .all(protect, authorizeRoles("TENANT_ADMIN", "SUPER_ADMIN"))
+  .all(
+    protect,
+    requireTenantAccess,
+    authorizeRoles("TENANT_ADMIN", "SUPER_ADMIN")
+  )
   .get(getBookingByIdAdmin)
   .put(updateBookingAdmin)
+  .delete(deleteBookingAdmin);
+
+// Admin routes for booking actions
+router
+  .route("/:id/cancel")
+  .all(
+    protect,
+    requireTenantAccess,
+    authorizeRoles("TENANT_ADMIN", "SUPER_ADMIN")
+  )
+  .patch(cancelBookingAdmin);
+
+router
+  .route("/:id/complete")
+  .all(
+    protect,
+    requireTenantAccess,
+    authorizeRoles("TENANT_ADMIN", "SUPER_ADMIN")
+  )
+  .patch(completeBookingAdmin);
+
+// Direct delete route for admin
+router
+  .route("/:id")
+  .all(
+    protect,
+    requireTenantAccess,
+    authorizeRoles("TENANT_ADMIN", "SUPER_ADMIN")
+  )
   .delete(deleteBookingAdmin);
 
 // --- Client routes for managing their own bookings ---

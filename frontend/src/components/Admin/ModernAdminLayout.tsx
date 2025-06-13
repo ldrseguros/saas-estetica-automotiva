@@ -50,6 +50,13 @@ const ModernAdminLayout: React.FC<ModernAdminLayoutProps> = ({ children }) => {
       description: "Equipe",
     },
     {
+      name: "Agendamentos",
+      href: "/admin/agendamentos",
+      icon: Calendar,
+      current: location.pathname === "/admin/agendamentos",
+      description: "Gerenciar agendamentos",
+    },
+    {
       name: "Clientes",
       href: "/admin/clientes",
       icon: UserCircle,

@@ -260,16 +260,16 @@ const CreateBookingModal: React.FC<CreateBookingModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px] bg-slate-900 text-slate-300">
+      <DialogContent className="sm:max-w-[425px] bg-white text-gray-900">
         <DialogHeader>
-          <DialogTitle>Novo Agendamento</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-gray-900">Novo Agendamento</DialogTitle>
+          <DialogDescription className="text-gray-600">
             Preencha os dados para criar um novo agendamento.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="clientId" className="text-right text-slate-300">
+            <Label htmlFor="clientId" className="text-right text-gray-700">
               Cliente
             </Label>
             <div className="col-span-3">
@@ -277,7 +277,7 @@ const CreateBookingModal: React.FC<CreateBookingModalProps> = ({
                 value={formData.clientId}
                 onValueChange={(value) => handleSelectChange("clientId", value)}
               >
-                <SelectTrigger className="w-full bg-slate-800 border-slate-700 text-white focus:ring-brand-red focus:border-brand-red">
+                <SelectTrigger className="w-full bg-white border-gray-300 text-black focus:ring-red-500 focus:border-red-500">
                   <SelectValue
                     placeholder={
                       loadingData
@@ -286,7 +286,7 @@ const CreateBookingModal: React.FC<CreateBookingModalProps> = ({
                     }
                   />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-700 text-white">
+                <SelectContent className="bg-white border-gray-300 text-black">
                   {loadingData ? (
                     <SelectItem value="loading" disabled>
                       Carregando...
@@ -312,7 +312,7 @@ const CreateBookingModal: React.FC<CreateBookingModalProps> = ({
           </div>
 
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="vehicleId" className="text-right text-slate-300">
+            <Label htmlFor="vehicleId" className="text-right text-gray-700">
               Veículo
             </Label>
             <div className="col-span-3">
@@ -323,7 +323,7 @@ const CreateBookingModal: React.FC<CreateBookingModalProps> = ({
                 }
                 disabled={!formData.clientId}
               >
-                <SelectTrigger className="w-full bg-slate-800 border-slate-700 text-white focus:ring-brand-red focus:border-brand-red">
+                <SelectTrigger className="w-full bg-white border-gray-300 text-black focus:ring-red-500 focus:border-red-500">
                   <SelectValue
                     placeholder={
                       loadingVehicles
@@ -334,7 +334,7 @@ const CreateBookingModal: React.FC<CreateBookingModalProps> = ({
                     }
                   />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-700 text-white">
+                <SelectContent className="bg-white border-gray-300 text-black">
                   {loadingVehicles ? (
                     <SelectItem value="loading" disabled>
                       Carregando...
@@ -360,16 +360,16 @@ const CreateBookingModal: React.FC<CreateBookingModalProps> = ({
           </div>
 
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="serviceIds" className="text-right text-slate-300">
+            <Label htmlFor="serviceIds" className="text-right text-gray-700">
               Serviços
             </Label>
             <div className="col-span-3 space-y-2">
               {loadingData ? (
-                <div className="text-slate-400">Carregando serviços...</div>
+                <div className="text-gray-500">Carregando serviços...</div>
               ) : errorLoadingData ? (
-                <div className="text-red-400">Erro ao carregar serviços</div>
+                <div className="text-red-500">Erro ao carregar serviços</div>
               ) : services.length === 0 ? (
-                <div className="text-slate-400">Nenhum serviço disponível</div>
+                <div className="text-gray-500">Nenhum serviço disponível</div>
               ) : (
                 services.map((service) => (
                   <div key={service.id} className="flex items-center space-x-2">
@@ -379,11 +379,11 @@ const CreateBookingModal: React.FC<CreateBookingModalProps> = ({
                       onCheckedChange={(isChecked: boolean) =>
                         handleServiceCheckboxChange(service.id, isChecked)
                       }
-                      className="border-slate-700 data-[state=checked]:bg-brand-red data-[state=checked]:border-brand-red"
+                      className="border-gray-300 data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500"
                     />
                     <Label
                       htmlFor={`service-${service.id}`}
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-slate-300"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-gray-700"
                     >
                       {service.title}
                     </Label>
@@ -394,7 +394,7 @@ const CreateBookingModal: React.FC<CreateBookingModalProps> = ({
           </div>
 
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="date" className="text-right">
+            <Label htmlFor="date" className="text-right text-gray-700">
               Data
             </Label>
             <Input
@@ -402,11 +402,11 @@ const CreateBookingModal: React.FC<CreateBookingModalProps> = ({
               type="date"
               value={formData.date}
               onChange={handleChange}
-              className="col-span-3"
+              className="col-span-3 bg-white text-gray-900 border-gray-300 focus:ring-red-500 focus:border-red-500"
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="time" className="text-right">
+            <Label htmlFor="time" className="text-right text-gray-700">
               Hora
             </Label>
             <Input
@@ -414,11 +414,11 @@ const CreateBookingModal: React.FC<CreateBookingModalProps> = ({
               type="time"
               value={formData.time}
               onChange={handleChange}
-              className="col-span-3"
+              className="col-span-3 bg-white text-gray-900 border-gray-300 focus:ring-red-500 focus:border-red-500"
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="status" className="text-right">
+            <Label htmlFor="status" className="text-right text-gray-700">
               Status
             </Label>
             <div className="col-span-3">
@@ -426,10 +426,10 @@ const CreateBookingModal: React.FC<CreateBookingModalProps> = ({
                 value={formData.status}
                 onValueChange={(value) => handleSelectChange("status", value)}
               >
-                <SelectTrigger className="w-full bg-slate-800 border-slate-700 text-white focus:ring-brand-red focus:border-brand-red">
+                <SelectTrigger className="w-full bg-white border-gray-300 text-black focus:ring-red-500 focus:border-red-500">
                   <SelectValue placeholder="Selecione o Status" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-700 text-white">
+                <SelectContent className="bg-white border-gray-300 text-black">
                   <SelectItem value="pending">Pendente</SelectItem>
                   <SelectItem value="confirmed">Confirmado</SelectItem>
                   <SelectItem value="completed">Completo</SelectItem>
@@ -440,36 +440,43 @@ const CreateBookingModal: React.FC<CreateBookingModalProps> = ({
             </div>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="location" className="text-right">
+            <Label htmlFor="location" className="text-right text-gray-700">
               Localização (Opcional)
             </Label>
             <Input
               id="location"
               value={formData.location}
               onChange={handleChange}
-              className="col-span-3"
+              className="col-span-3 bg-white text-gray-900 border-gray-300 focus:ring-red-500 focus:border-red-500"
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="specialInstructions" className="text-right">
+            <Label
+              htmlFor="specialInstructions"
+              className="text-right text-gray-700"
+            >
               Instruções Especiais (Opcional)
             </Label>
             <Textarea
               id="specialInstructions"
               value={formData.specialInstructions}
               onChange={handleChange}
-              className="col-span-3"
+              className="col-span-3 bg-white text-gray-900 border-gray-300 focus:ring-red-500 focus:border-red-500"
             />
           </div>
         </form>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="border-gray-300 bg-white   text-gray-700 hover:text-red-600 hover:bg-white hover:border-red-600"
+          >
             Cancelar
           </Button>
           <Button
             type="submit"
             onClick={handleSubmit}
-            className="bg-brand-red hover:bg-brand-red/90"
+            className="bg-red-600 hover:bg-red-700 text-white"
           >
             Criar Agendamento
           </Button>

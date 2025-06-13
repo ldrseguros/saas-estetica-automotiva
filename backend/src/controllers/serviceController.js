@@ -16,7 +16,15 @@ const prisma = new PrismaClient();
 // @access  Admin
 export const getAllServices = async (req, res) => {
   try {
-    const services = await findAllServices();
+    // Obter tenantId do usuário autenticado
+    const tenantId = req.user.tenantId;
+    if (!tenantId) {
+      return res
+        .status(400)
+        .json({ message: "TenantId não encontrado no usuário" });
+    }
+
+    const services = await findAllServices(tenantId);
     res.status(200).json(services);
   } catch (error) {
     console.error("Error in getAllServices controller:", error);
@@ -32,7 +40,15 @@ export const getAllServices = async (req, res) => {
 // @access  Public
 export const getPublicServices = async (req, res) => {
   try {
-    const services = await findAllServices();
+    // Para services públicos, precisamos do tenantId do header ou subdomínio
+    const tenantId = req.headers["x-tenant-id"];
+    if (!tenantId) {
+      return res
+        .status(400)
+        .json({ message: "TenantId é obrigatório para serviços públicos" });
+    }
+
+    const services = await findAllServices(tenantId);
     res.status(200).json(services);
   } catch (error) {
     console.error("Error in getPublicServices controller:", error);
@@ -54,12 +70,21 @@ export const createService = async (req, res) => {
   }
 
   try {
+    // Obter tenantId do usuário autenticado
+    const tenantId = req.user.tenantId;
+    if (!tenantId) {
+      return res
+        .status(400)
+        .json({ message: "TenantId não encontrado no usuário" });
+    }
+
     const newService = await addNewService({
       title,
       description,
       price,
       duration,
       imageSrc,
+      tenantId,
     });
     res.status(201).json(newService);
   } catch (error) {
@@ -82,7 +107,15 @@ export const createService = async (req, res) => {
 export const getServiceById = async (req, res) => {
   const { id } = req.params;
   try {
-    const service = await findServiceById(id);
+    // Obter tenantId do usuário autenticado
+    const tenantId = req.user.tenantId;
+    if (!tenantId) {
+      return res
+        .status(400)
+        .json({ message: "TenantId não encontrado no usuário" });
+    }
+
+    const service = await findServiceById(id, tenantId);
 
     if (!service) {
       return res.status(404).json({ message: "Service not found" });
@@ -106,7 +139,15 @@ export const updateService = async (req, res) => {
   const { title, description, price, duration, imageSrc } = req.body;
 
   try {
-    const existingService = await findServiceById(id);
+    // Obter tenantId do usuário autenticado
+    const tenantId = req.user.tenantId;
+    if (!tenantId) {
+      return res
+        .status(400)
+        .json({ message: "TenantId não encontrado no usuário" });
+    }
+
+    const existingService = await findServiceById(id, tenantId);
     if (!existingService) {
       return res
         .status(404)
@@ -130,13 +171,17 @@ export const updateService = async (req, res) => {
       }
     }
 
-    const updatedService = await modifyService(id, {
-      title,
-      description,
-      price,
-      duration,
-      imageSrc,
-    });
+    const updatedService = await modifyService(
+      id,
+      {
+        title,
+        description,
+        price,
+        duration,
+        imageSrc,
+      },
+      tenantId
+    );
     res.status(200).json(updatedService);
   } catch (error) {
     console.error(`Error in updateService controller (ID: ${id}):`, error);
@@ -158,9 +203,22 @@ export const updateService = async (req, res) => {
 export const deleteService = async (req, res) => {
   const { id } = req.params;
   try {
-    // Verifica se existe algum agendamento vinculado a este serviço
+    // Obter tenantId do usuário autenticado
+    const tenantId = req.user.tenantId;
+    if (!tenantId) {
+      return res
+        .status(400)
+        .json({ message: "TenantId não encontrado no usuário" });
+    }
+
+    // Verifica se existe algum agendamento vinculado a este serviço (mesmo tenant)
     const bookingsWithService = await prisma.bookingService.findMany({
-      where: { serviceId: id },
+      where: {
+        serviceId: id,
+        booking: {
+          tenantId: tenantId, // FILTRO POR TENANT
+        },
+      },
     });
     if (bookingsWithService.length > 0) {
       return res.status(400).json({
@@ -169,7 +227,7 @@ export const deleteService = async (req, res) => {
       });
     }
     // Se não houver vínculos, pode deletar normalmente
-    await removeService(id);
+    await removeService(id, tenantId);
     res.status(200).json({ message: "Serviço deletado com sucesso." });
   } catch (error) {
     console.error(`Error in deleteService controller (ID: ${id}):`, error);

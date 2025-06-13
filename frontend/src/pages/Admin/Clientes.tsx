@@ -180,14 +180,6 @@ const Clientes: React.FC = () => {
             gradient="from-blue-500 to-blue-600"
           />
           <StatCard
-            title="Novos Este Mês"
-            value="12"
-            change="+15%"
-            changeType="positive"
-            icon={Users}
-            gradient="from-green-500 to-green-600"
-          />
-          <StatCard
             title="Ativos"
             value={clientes.length}
             icon={Users}

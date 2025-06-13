@@ -10,10 +10,19 @@ import {
 
 const prisma = new PrismaClient();
 
-export const fetchDashboardStatistics = async () => {
+export const fetchDashboardStatistics = async (tenantId) => {
+  // Validar se tenantId foi fornecido
+  if (!tenantId) {
+    const error = new Error(
+      "TenantId é obrigatório para buscar estatísticas do dashboard"
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
   try {
     console.log(
-      "[DashboardService] Iniciando busca de estatísticas do dashboard..."
+      `[DashboardService] Iniciando busca de estatísticas do dashboard para tenant ${tenantId}...`
     );
     // 1. Bookings for today
     const today = new Date();
@@ -25,6 +34,7 @@ export const fetchDashboardStatistics = async () => {
     );
     const bookingsToday = await prisma.booking.count({
       where: {
+        tenantId: tenantId, // FILTRO POR TENANT
         date: {
           gte: startOfToday,
           lte: endOfToday,
@@ -37,6 +47,9 @@ export const fetchDashboardStatistics = async () => {
     // 2. Total bookings
     console.log("[DashboardService] Buscando total de agendamentos...");
     const totalBookings = await prisma.booking.count({
+      where: {
+        tenantId: tenantId, // FILTRO POR TENANT
+      },
       // where: { status: { not: 'cancelled' } } // Optional: Filter out cancelled bookings
     });
     console.log(`[DashboardService] Total de agendamentos: ${totalBookings}`);
@@ -54,6 +67,9 @@ export const fetchDashboardStatistics = async () => {
       );
       const newClientsThisMonth = await prisma.clientProfile.count({
         where: {
+          account: {
+            tenantId: tenantId, // FILTRO POR TENANT
+          },
           createdAt: {
             gte: firstDayOfMonth,
             lte: lastDayOfMonth,

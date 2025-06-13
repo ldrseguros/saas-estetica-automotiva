@@ -25,9 +25,17 @@ const prisma = new PrismaClient();
 // @access  Admin
 export const getAllBookingsAdmin = async (req, res) => {
   try {
+    // Obter tenantId do usuário autenticado
+    const tenantId = req.user.tenantId;
+    if (!tenantId) {
+      return res
+        .status(400)
+        .json({ message: "TenantId não encontrado no usuário" });
+    }
+
     const limit = req.query.limit ? parseInt(req.query.limit, 10) : 10;
     const fromDate = req.query.fromDate;
-    const bookings = await fetchAllBookingsAdmin({ limit, fromDate });
+    const bookings = await fetchAllBookingsAdmin({ limit, fromDate, tenantId });
     res.status(200).json(bookings);
   } catch (error) {
     console.error("Error in getAllBookingsAdmin controller:", error);
@@ -76,6 +84,14 @@ export const createBookingAdmin = async (req, res) => {
   }
 
   try {
+    // Obter tenantId do usuário autenticado
+    const tenantId = req.user.tenantId;
+    if (!tenantId) {
+      return res
+        .status(400)
+        .json({ message: "TenantId não encontrado no usuário" });
+    }
+
     const newBooking = await addNewBookingAdminService({
       clientId,
       vehicleId,
@@ -85,6 +101,7 @@ export const createBookingAdmin = async (req, res) => {
       status,
       specialInstructions,
       location,
+      tenantId,
     });
 
     console.log("New booking created successfully:", newBooking);
@@ -103,7 +120,15 @@ export const createBookingAdmin = async (req, res) => {
 export const getBookingByIdAdmin = async (req, res) => {
   const { id } = req.params;
   try {
-    const booking = await fetchBookingByIdAdmin(id);
+    // Obter tenantId do usuário autenticado
+    const tenantId = req.user.tenantId;
+    if (!tenantId) {
+      return res
+        .status(400)
+        .json({ message: "TenantId não encontrado no usuário" });
+    }
+
+    const booking = await fetchBookingByIdAdmin(id, tenantId);
     res.status(200).json(booking);
   } catch (error) {
     console.error(
@@ -123,7 +148,15 @@ export const updateBookingAdmin = async (req, res) => {
   const { id } = req.params;
   const updates = req.body;
   try {
-    const updatedBooking = await modifyBookingAdmin(id, updates);
+    // Obter tenantId do usuário autenticado
+    const tenantId = req.user.tenantId;
+    if (!tenantId) {
+      return res
+        .status(400)
+        .json({ message: "TenantId não encontrado no usuário" });
+    }
+
+    const updatedBooking = await modifyBookingAdmin(id, updates, tenantId);
     res.status(200).json(updatedBooking);
   } catch (error) {
     console.error(
@@ -143,7 +176,15 @@ export const updateBookingAdmin = async (req, res) => {
 export const deleteBookingAdmin = async (req, res) => {
   const { id } = req.params;
   try {
-    const result = await removeBookingAdmin(id);
+    // Obter tenantId do usuário autenticado
+    const tenantId = req.user.tenantId;
+    if (!tenantId) {
+      return res
+        .status(400)
+        .json({ message: "TenantId não encontrado no usuário" });
+    }
+
+    const result = await removeBookingAdmin(id, tenantId);
     res.status(200).json(result); // Service returns a message object
   } catch (error) {
     console.error(
@@ -153,6 +194,76 @@ export const deleteBookingAdmin = async (req, res) => {
     res.status(error.statusCode || 500).json({
       message:
         error.message || `Error deleting booking with ID ${id} for admin`,
+    });
+  }
+};
+
+// @desc    Cancel booking (for Admin)
+// @route   PATCH /api/bookings/:id/cancel
+// @access  Admin
+export const cancelBookingAdmin = async (req, res) => {
+  const { id } = req.params;
+  try {
+    // Obter tenantId do usuário autenticado
+    const tenantId = req.user.tenantId;
+    if (!tenantId) {
+      return res
+        .status(400)
+        .json({ message: "TenantId não encontrado no usuário" });
+    }
+
+    const result = await modifyBookingAdmin(
+      id,
+      { status: "cancelled" },
+      tenantId
+    );
+    res.status(200).json({
+      message: "Agendamento cancelado com sucesso",
+      booking: result,
+    });
+  } catch (error) {
+    console.error(
+      `Error in cancelBookingAdmin controller for ID ${id}:`,
+      error
+    );
+    res.status(error.statusCode || 500).json({
+      message:
+        error.message || `Error cancelling booking with ID ${id} for admin`,
+    });
+  }
+};
+
+// @desc    Complete booking (for Admin)
+// @route   PATCH /api/bookings/:id/complete
+// @access  Admin
+export const completeBookingAdmin = async (req, res) => {
+  const { id } = req.params;
+  try {
+    // Obter tenantId do usuário autenticado
+    const tenantId = req.user.tenantId;
+    if (!tenantId) {
+      return res
+        .status(400)
+        .json({ message: "TenantId não encontrado no usuário" });
+    }
+
+    const result = await modifyBookingAdmin(
+      id,
+      { status: "completed" },
+      tenantId
+    );
+    res.status(200).json({
+      message: "Agendamento marcado como concluído",
+      booking: result,
+    });
+  } catch (error) {
+    console.error(
+      `Error in completeBookingAdmin controller for ID ${id}:`,
+      error
+    );
+    res.status(error.statusCode || 500).json({
+      message:
+        error.message || `Error completing booking with ID ${id} for admin`,
     });
   }
 };

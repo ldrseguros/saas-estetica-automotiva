@@ -48,6 +48,16 @@ interface PaymentHistory {
   description: string;
 }
 
+interface PaymentRecord {
+  id: string;
+  paymentDate: string;
+  amount: number;
+  status: "completed" | "failed" | "pending";
+  paymentMethod: string;
+  planName?: string;
+  billingCycle?: string;
+}
+
 interface PlanLimits {
   employees: {
     current: number;
@@ -82,42 +92,62 @@ const SubscriptionStatusPage = () => {
       setLoading(true);
       setError(null);
 
-      const [subscriptionResponse, limitsResponse] = await Promise.all([
-        paymentAPI.getSubscriptionStatus(),
-        paymentAPI.getPlanLimits(),
-      ]);
+      const [subscriptionResponse, limitsResponse, paymentHistoryResponse] =
+        await Promise.all([
+          paymentAPI.getSubscriptionStatus(),
+          paymentAPI.getPlanLimits(),
+          paymentAPI.getPaymentHistory({ limit: 10 }), // Buscar últimos 10 pagamentos
+        ]);
 
       setSubscription(subscriptionResponse);
       setPlanLimits(limitsResponse);
 
-      // Buscar histórico de pagamentos (simulado por enquanto)
-      const mockPayments: PaymentHistory[] = [
-        {
-          id: "1",
-          date: "2024-06-01T10:00:00Z",
-          amount: 99.9,
-          status: "PAID",
-          description: "Assinatura Mensal - Plano Básico",
-        },
-        {
-          id: "2",
-          date: "2024-05-01T10:00:00Z",
-          amount: 99.9,
-          status: "PAID",
-          description: "Assinatura Mensal - Plano Básico",
-        },
-        {
-          id: "3",
-          date: "2024-04-01T10:00:00Z",
-          amount: 99.9,
-          status: "PAID",
-          description: "Assinatura Mensal - Plano Básico",
-        },
-      ];
-      setPaymentHistory(mockPayments);
-    } catch (err) {
+      // Transformar dados do histórico de pagamentos para o formato esperado
+      const payments = paymentHistoryResponse.payments.map(
+        (payment: PaymentRecord) => ({
+          id: payment.id,
+          date: payment.paymentDate,
+          amount: payment.amount,
+          status:
+            payment.status === "completed"
+              ? "PAID"
+              : payment.status === "failed"
+              ? "FAILED"
+              : "PENDING",
+          description: `${payment.planName || "Assinatura"} ${
+            payment.billingCycle === "monthly" ? "Mensal" : "Anual"
+          } ${
+            payment.paymentMethod === "credit_card" ? "- Cartão de Crédito" : ""
+          }`,
+        })
+      );
+
+      setPaymentHistory(payments);
+    } catch (err: unknown) {
       console.error("Erro ao carregar dados da assinatura:", err);
-      setError("Não foi possível carregar as informações da assinatura");
+
+      // Se for erro de histórico de pagamentos vazio, não é um erro fatal
+      const error = err as { response?: { status?: number }; message?: string };
+      if (
+        error.response?.status === 404 ||
+        error.message?.includes("histórico")
+      ) {
+        setPaymentHistory([]);
+        // Ainda tentar carregar as outras informações
+        try {
+          const [subscriptionResponse, limitsResponse] = await Promise.all([
+            paymentAPI.getSubscriptionStatus(),
+            paymentAPI.getPlanLimits(),
+          ]);
+
+          setSubscription(subscriptionResponse);
+          setPlanLimits(limitsResponse);
+        } catch (innerErr) {
+          setError("Não foi possível carregar as informações da assinatura");
+        }
+      } else {
+        setError("Não foi possível carregar as informações da assinatura");
+      }
     } finally {
       setLoading(false);
     }

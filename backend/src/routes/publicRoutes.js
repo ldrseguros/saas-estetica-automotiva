@@ -1,6 +1,7 @@
 import express from "express";
 import prisma from "../lib/prisma.js";
 import bcrypt from "bcrypt";
+import emailAutomation from "../services/emailAutomationService.js";
 
 const router = express.Router();
 
@@ -135,10 +136,31 @@ router.post("/signup", async (req, res) => {
       return { tenant, adminAccount };
     });
 
+    // 🎉 DISPARAR EMAIL DE BOAS-VINDAS AUTOMÁTICO
+    try {
+      await emailAutomation.onUserRegistered({
+        email: adminEmail,
+        name: adminName,
+        dashboardUrl: `${
+          process.env.FRONTEND_URL || "http://localhost:8080"
+        }/admin/dashboard`,
+      });
+      console.log(
+        `📧 [SIGNUP] Email de boas-vindas enviado para: ${adminEmail}`
+      );
+    } catch (emailError) {
+      console.error(
+        "📧 [SIGNUP] Erro ao enviar email de boas-vindas:",
+        emailError
+      );
+      // Não bloqueamos o cadastro se o email falhar
+    }
+
     // Retornar sucesso (sem dados sensíveis)
     res.status(201).json({
       success: true,
-      message: "Conta criada com sucesso!",
+      message:
+        "Conta criada com sucesso! Verifique seu email para dicas de configuração.",
       tenant: {
         id: result.tenant.id,
         name: result.tenant.name,

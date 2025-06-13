@@ -2,6 +2,7 @@ import express from "express";
 import {
   testEmailConfiguration,
   sendTestEmail,
+  getAvailableEmailTemplates,
 } from "../services/emailService.js";
 import { protect, admin } from "../middlewares/authMiddleware.js";
 
@@ -10,6 +11,38 @@ const router = express.Router();
 // Aplicar middleware de autenticação em todas as rotas
 router.use(protect);
 router.use(admin);
+
+/**
+ * Listar todos os templates de email disponíveis
+ * GET /api/admin/email/templates
+ */
+router.get("/templates", async (req, res) => {
+  try {
+    const templates = getAvailableEmailTemplates();
+
+    // Contar total de templates
+    const totalTemplates = Object.values(templates).reduce(
+      (total, category) => total + category.length,
+      0
+    );
+
+    res.json({
+      success: true,
+      message: `${totalTemplates} templates de email organizados por categoria`,
+      data: {
+        categories: Object.keys(templates).length,
+        totalTemplates,
+        templates,
+      },
+    });
+  } catch (error) {
+    console.error("Erro ao listar templates de email:", error);
+    res.status(500).json({
+      success: false,
+      message: "Erro interno do servidor",
+    });
+  }
+});
 
 /**
  * Testar configuração de email

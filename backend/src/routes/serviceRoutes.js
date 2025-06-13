@@ -4,6 +4,7 @@ import path from "path";
 import fs from "fs";
 import { protect } from "../middlewares/authMiddleware.js";
 import { authorizeRoles } from "../middlewares/roleMiddleware.js";
+import { requireTenantAccess } from "../middlewares/tenantMiddleware.js";
 import {
   getAllServices,
   createService,
@@ -89,13 +90,21 @@ router.post(
 // Admin routes - require authentication and ADMIN role
 router
   .route("/admin")
-  .all(protect, authorizeRoles("TENANT_ADMIN", "SUPER_ADMIN")) // Apply middleware to all methods on this path
+  .all(
+    protect,
+    requireTenantAccess,
+    authorizeRoles("TENANT_ADMIN", "SUPER_ADMIN")
+  ) // Apply middleware to all methods on this path
   .get(getAllServices) // GET /api/services/admin
   .post(createService); // POST /api/services/admin
 
 router
   .route("/admin/:id")
-  .all(protect, authorizeRoles("TENANT_ADMIN", "SUPER_ADMIN")) // Apply middleware to all methods on this path
+  .all(
+    protect,
+    requireTenantAccess,
+    authorizeRoles("TENANT_ADMIN", "SUPER_ADMIN")
+  ) // Apply middleware to all methods on this path
   .get(getServiceById) // GET /api/services/admin/:id
   .put(updateService) // PUT /api/services/admin/:id
   .delete(deleteService); // DELETE /api/services/admin/:id

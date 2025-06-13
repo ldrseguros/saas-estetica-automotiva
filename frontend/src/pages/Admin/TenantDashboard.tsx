@@ -36,7 +36,16 @@ interface UpcomingBooking {
   id: string;
   date: string;
   startTime: string;
-  status: "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED";
+  status:
+    | "PENDING"
+    | "CONFIRMED"
+    | "CANCELLED"
+    | "COMPLETED"
+    | "scheduled"
+    | "cancelled"
+    | "pending"
+    | "completed"
+    | "confirmed";
   client: {
     name: string;
     email: string;
@@ -67,11 +76,13 @@ interface DashboardData {
 interface BookingApi {
   id: string;
   date: string;
-  time: string;
+  time?: string; // Para compatibilidade com formato antigo
+  startTime?: string; // Para compatibilidade com formato novo
   status: string;
   client: {
     name: string;
-    account: {
+    email?: string; // Email direto do cliente
+    account?: {
       email: string;
     } | null;
   } | null;
@@ -129,17 +140,21 @@ const TenantDashboard = () => {
           throw new Error("Erro ao buscar agendamentos");
         }
 
-        const allBookingsRaw: BookingApi[] = await bookingsResponse.json();
+        const bookingsData = await bookingsResponse.json();
+        const allBookingsRaw: BookingApi[] =
+          bookingsData.bookings || bookingsData; // Compatibilidade com ambos os formatos
+
         // Adaptar para o formato esperado pelo dashboard
         const allBookings: UpcomingBooking[] = allBookingsRaw.map(
           (booking) => ({
             id: booking.id,
             date: booking.date,
-            startTime: booking.time,
+            startTime: booking.startTime || booking.time, // Compatibilidade com ambos os campos
             status: booking.status as UpcomingBooking["status"],
             client: {
               name: booking.client?.name || "",
-              email: booking.client?.account?.email || "",
+              email:
+                booking.client?.email || booking.client?.account?.email || "",
             },
             services: (booking.services || []).map((s) => ({
               name: s.service?.title || "",
@@ -154,10 +169,11 @@ const TenantDashboard = () => {
         const upcomingBookings = allBookings
           .filter((booking: UpcomingBooking) => {
             const bookingDate = new Date(booking.date);
+            const status = booking.status.toLowerCase();
             return (
               bookingDate >= now &&
               bookingDate <= nextWeek &&
-              booking.status !== "CANCELLED"
+              status !== "cancelled"
             );
           })
           .sort(
@@ -268,14 +284,16 @@ const TenantDashboard = () => {
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case "CONFIRMED":
+    const normalizedStatus = status.toLowerCase();
+    switch (normalizedStatus) {
+      case "confirmed":
+      case "scheduled":
         return "bg-green-100 text-green-800";
-      case "PENDING":
+      case "pending":
         return "bg-yellow-100 text-yellow-800";
-      case "CANCELLED":
+      case "cancelled":
         return "bg-red-100 text-red-800";
-      case "COMPLETED":
+      case "completed":
         return "bg-green-100 text-green-800";
       default:
         return "bg-gray-100 text-gray-800";
@@ -283,14 +301,16 @@ const TenantDashboard = () => {
   };
 
   const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "CONFIRMED":
+    const normalizedStatus = status.toLowerCase();
+    switch (normalizedStatus) {
+      case "confirmed":
+      case "scheduled":
         return <CheckCircle className="h-4 w-4" />;
-      case "PENDING":
+      case "pending":
         return <Clock className="h-4 w-4" />;
-      case "CANCELLED":
+      case "cancelled":
         return <AlertCircle className="h-4 w-4" />;
-      case "COMPLETED":
+      case "completed":
         return <CheckCircle className="h-4 w-4" />;
       default:
         return <Clock className="h-4 w-4" />;
@@ -298,14 +318,16 @@ const TenantDashboard = () => {
   };
 
   const getStatusLabel = (status: string) => {
-    switch (status) {
-      case "CONFIRMED":
-        return "Confirmado";
-      case "PENDING":
+    const normalizedStatus = status.toLowerCase();
+    switch (normalizedStatus) {
+      case "confirmed":
+      case "scheduled":
+        return "Agendado";
+      case "pending":
         return "Pendente";
-      case "CANCELLED":
+      case "cancelled":
         return "Cancelado";
-      case "COMPLETED":
+      case "completed":
         return "Concluído";
       default:
         return status;

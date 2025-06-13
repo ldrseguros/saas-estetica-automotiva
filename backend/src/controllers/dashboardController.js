@@ -5,7 +5,15 @@ import { fetchDashboardStatistics } from "../services/dashboardService.js";
 // @access  Admin
 export const getDashboardStats = async (req, res) => {
   try {
-    const stats = await fetchDashboardStatistics();
+    // Obter tenantId do usuário autenticado
+    const tenantId = req.user.tenantId;
+    if (!tenantId) {
+      return res
+        .status(400)
+        .json({ message: "TenantId não encontrado no usuário" });
+    }
+
+    const stats = await fetchDashboardStatistics(tenantId);
     res.status(200).json(stats);
   } catch (error) {
     console.error("Error in getDashboardStats controller:", error);

@@ -13,6 +13,7 @@ import Login from "./pages/Auth/Login";
 import Usuarios from "./pages/Admin/Usuarios";
 import Clientes from "./pages/Admin/Clientes";
 import Servicos from "./pages/Admin/Servicos";
+import Agendamentos from "./pages/Admin/Agendamentos";
 import WhatsApp from "./pages/Admin/WhatsApp";
 import Assinatura from "./pages/Admin/Assinatura";
 import Planos from "./pages/Admin/Planos";
@@ -118,6 +119,14 @@ const App = () => (
             element={
               <ProtectedRoute allowedRoles={["TENANT_ADMIN", "SUPER_ADMIN"]}>
                 <Usuarios />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/agendamentos"
+            element={
+              <ProtectedRoute allowedRoles={["TENANT_ADMIN", "SUPER_ADMIN"]}>
+                <Agendamentos />
               </ProtectedRoute>
             }
           />

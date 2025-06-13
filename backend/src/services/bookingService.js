@@ -18,40 +18,111 @@ const getClientProfileIdFromAuthId = async (authAccountId) => {
 
 // --- ADMIN BOOKING SERVICES ---
 
-export const fetchAllBookingsAdmin = async ({ limit = 10, fromDate } = {}) => {
-  // Se não passar fromDate, pega hoje
-  const now = fromDate ? new Date(fromDate) : new Date();
-  const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+export const fetchAllBookingsAdmin = async ({
+  limit = 50,
+  fromDate,
+  tenantId,
+} = {}) => {
+  // Validar se tenantId foi fornecido
+  if (!tenantId) {
+    const error = new Error("TenantId é obrigatório para buscar agendamentos");
+    error.statusCode = 400;
+    throw error;
+  }
 
-  return await prisma.booking.findMany({
+  // Se não passar fromDate, pega últimos 30 dias para mostrar histórico
+  const now = new Date();
+  const startDate = fromDate
+    ? new Date(fromDate)
+    : new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+  const bookings = await prisma.booking.findMany({
     where: {
+      tenantId: tenantId, // FILTRO POR TENANT
       date: {
-        gte: now,
-        lte: nextWeek,
+        gte: startDate,
       },
-      status: { not: "CANCELLED" },
     },
-    select: {
-      id: true,
-      date: true,
-      time: true,
-      status: true,
+    include: {
       client: {
-        select: {
-          name: true,
-          account: { select: { email: true } },
+        include: {
+          account: true,
         },
       },
       vehicle: true,
       services: {
-        select: {
-          service: { select: { title: true, price: true } },
+        include: {
+          service: true,
         },
       },
     },
-    orderBy: [{ date: "asc" }, { time: "asc" }],
+    orderBy: [{ date: "desc" }, { time: "desc" }],
     take: limit,
   });
+
+  // Calcular preço total e transformar dados para compatibilidade com frontend
+  const transformedBookings = bookings.map((booking) => {
+    const totalPrice = booking.services.reduce(
+      (total, service) => total + service.service.price,
+      0
+    );
+
+    // Calcular endTime baseado no startTime e duração dos serviços
+    const totalDuration = booking.services.reduce(
+      (total, service) => total + (service.service.duration || 60),
+      0
+    );
+    const [hours, minutes] = booking.time.split(":").map(Number);
+    const startTimeMinutes = hours * 60 + minutes;
+    const endTimeMinutes = startTimeMinutes + totalDuration;
+    const endHours = Math.floor(endTimeMinutes / 60);
+    const endMins = endTimeMinutes % 60;
+    const endTime = `${endHours.toString().padStart(2, "0")}:${endMins
+      .toString()
+      .padStart(2, "0")}`;
+
+    return {
+      id: booking.id,
+      date: booking.date.toISOString().split("T")[0], // Format: YYYY-MM-DD
+      startTime: booking.time,
+      endTime: endTime,
+      status: booking.status.toLowerCase(),
+      totalPrice: totalPrice,
+      location: booking.location || "loja",
+      address: booking.address,
+      notes: booking.specialInstructions,
+      client: {
+        id: booking.client.id,
+        name: booking.client.name,
+        email: booking.client.account.email,
+        phone: booking.client.phone,
+      },
+      vehicle: {
+        id: booking.vehicle.id,
+        brand: booking.vehicle.brand,
+        model: booking.vehicle.model,
+        year: booking.vehicle.year,
+        plate: booking.vehicle.plate,
+        color: booking.vehicle.color,
+      },
+      services: booking.services.map((service) => ({
+        id: service.id,
+        service: {
+          id: service.service.id,
+          title: service.service.title,
+          price: service.service.price,
+          duration: service.service.duration,
+        },
+      })),
+      createdAt: booking.createdAt.toISOString(),
+      updatedAt: booking.updatedAt.toISOString(),
+    };
+  });
+
+  return {
+    bookings: transformedBookings,
+    total: transformedBookings.length,
+  };
 };
 
 export const addNewBookingAdmin = async (bookingData) => {
@@ -64,7 +135,15 @@ export const addNewBookingAdmin = async (bookingData) => {
     status = "pending",
     specialInstructions,
     location,
+    tenantId,
   } = bookingData;
+
+  // Validar se tenantId foi fornecido
+  if (!tenantId) {
+    const error = new Error("TenantId é obrigatório para criar agendamento");
+    error.statusCode = 400;
+    throw error;
+  }
 
   // Verificar se o ID fornecido é um authAccountId ou um clientProfileId
   let clientProfileId = clientId;
@@ -99,7 +178,7 @@ export const addNewBookingAdmin = async (bookingData) => {
     );
   }
 
-  // Verifica se o veículo pertence ao cliente
+  // Verifica se o veículo pertence ao cliente E ao tenant
   const vehicle = await prisma.vehicle.findUnique({
     where: { id: vehicleId },
   });
@@ -116,6 +195,12 @@ export const addNewBookingAdmin = async (bookingData) => {
     throw error;
   }
 
+  if (vehicle.tenantId !== tenantId) {
+    const error = new Error(`O veículo não pertence ao tenant especificado`);
+    error.statusCode = 403;
+    throw error;
+  }
+
   // Corrigindo o problema de fuso horário: mantendo a data original
   // Formato esperado: YYYY-MM-DD
   const [year, month, day] = date.split("-").map((num) => parseInt(num, 10));
@@ -128,6 +213,7 @@ export const addNewBookingAdmin = async (bookingData) => {
     data: {
       clientId: clientProfileId, // Usa o clientProfileId correto
       vehicleId,
+      tenantId, // ADICIONAR TENANT ID
       date: bookingDate,
       time,
       status,
@@ -147,9 +233,19 @@ export const addNewBookingAdmin = async (bookingData) => {
   });
 };
 
-export const fetchBookingByIdAdmin = async (id) => {
+export const fetchBookingByIdAdmin = async (id, tenantId) => {
+  // Validar se tenantId foi fornecido
+  if (!tenantId) {
+    const error = new Error("TenantId é obrigatório para buscar agendamento");
+    error.statusCode = 400;
+    throw error;
+  }
+
   const booking = await prisma.booking.findUnique({
-    where: { id },
+    where: {
+      id,
+      tenantId, // FILTRO POR TENANT
+    },
     include: {
       client: { include: { account: true } },
       vehicle: true,
@@ -164,8 +260,34 @@ export const fetchBookingByIdAdmin = async (id) => {
   return booking;
 };
 
-export const modifyBookingAdmin = async (id, updates) => {
+export const modifyBookingAdmin = async (id, updates, tenantId) => {
+  // Validar se tenantId foi fornecido
+  if (!tenantId) {
+    const error = new Error(
+      "TenantId é obrigatório para modificar agendamento"
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
   try {
+    // Verificar se o booking existe e pertence ao tenant
+    const existingBooking = await prisma.booking.findUnique({
+      where: { id },
+    });
+
+    if (!existingBooking) {
+      const error = new Error("Booking not found.");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (existingBooking.tenantId !== tenantId) {
+      const error = new Error("Booking not found or access denied.");
+      error.statusCode = 404;
+      throw error;
+    }
+
     // Extract only the allowed fields for update
     const allowedUpdates = {
       date: updates.date ? new Date(updates.date) : undefined,
@@ -176,7 +298,10 @@ export const modifyBookingAdmin = async (id, updates) => {
     };
 
     const updatedBooking = await prisma.booking.update({
-      where: { id },
+      where: {
+        id,
+        tenantId, // FILTRO POR TENANT
+      },
       data: allowedUpdates, // Pass only allowed updates
       include: {
         client: { include: { account: true } },
@@ -196,8 +321,20 @@ export const modifyBookingAdmin = async (id, updates) => {
   }
 };
 
-export const removeBookingAdmin = async (id) => {
-  const existingBooking = await prisma.booking.findUnique({ where: { id } });
+export const removeBookingAdmin = async (id, tenantId) => {
+  // Validar se tenantId foi fornecido
+  if (!tenantId) {
+    const error = new Error("TenantId é obrigatório para deletar agendamento");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const existingBooking = await prisma.booking.findUnique({
+    where: {
+      id,
+      tenantId, // FILTRO POR TENANT
+    },
+  });
   if (!existingBooking) {
     const error = new Error("Booking not found to delete.");
     error.statusCode = 404;
@@ -206,7 +343,12 @@ export const removeBookingAdmin = async (id) => {
   // Transaction to ensure atomicity if deleting related BookingService entries
   return await prisma.$transaction(async (tx) => {
     await tx.bookingService.deleteMany({ where: { bookingId: id } });
-    await tx.booking.delete({ where: { id } });
+    await tx.booking.delete({
+      where: {
+        id,
+        tenantId, // FILTRO POR TENANT
+      },
+    });
     return { message: `Booking with ID ${id} deleted successfully by admin.` };
   });
 };

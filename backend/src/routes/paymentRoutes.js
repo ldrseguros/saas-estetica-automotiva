@@ -3,8 +3,18 @@ import { PrismaClient } from "@prisma/client";
 import Stripe from "stripe";
 import protect from "../middlewares/authMiddleware.js";
 import { authorizeRoles } from "../middlewares/roleMiddleware.js";
+import { requireTenantAccess } from "../middlewares/tenantMiddleware.js";
 import dotenv from "dotenv";
 import { sendSubscriptionConfirmation } from "../services/emailService.js";
+import {
+  getPaymentHistoryController,
+  getPaymentStatsController,
+  getLastPaymentController,
+  getNextBillingController,
+  createPaymentController,
+  updatePaymentStatusController,
+  getPlanLimitsController,
+} from "../controllers/subscriptionPaymentController.js";
 
 dotenv.config();
 
@@ -790,5 +800,90 @@ async function handleSubscriptionDeleted(subscription) {
     console.error("Erro ao processar customer.subscription.deleted:", error);
   }
 }
+
+// === NOVAS ROTAS PARA HISTÓRICO DE PAGAMENTOS ===
+
+/**
+ * Buscar histórico de pagamentos do tenant
+ * GET /api/payments/history
+ */
+router.get(
+  "/history",
+  protect,
+  requireTenantAccess,
+  authorizeRoles("TENANT_ADMIN", "SUPER_ADMIN"),
+  getPaymentHistoryController
+);
+
+/**
+ * Buscar estatísticas de pagamentos do tenant
+ * GET /api/payments/stats
+ */
+router.get(
+  "/stats",
+  protect,
+  requireTenantAccess,
+  authorizeRoles("TENANT_ADMIN", "SUPER_ADMIN"),
+  getPaymentStatsController
+);
+
+/**
+ * Buscar último pagamento do tenant
+ * GET /api/payments/last
+ */
+router.get(
+  "/last",
+  protect,
+  requireTenantAccess,
+  authorizeRoles("TENANT_ADMIN", "SUPER_ADMIN"),
+  getLastPaymentController
+);
+
+/**
+ * Buscar próxima data de cobrança do tenant
+ * GET /api/payments/next-billing
+ */
+router.get(
+  "/next-billing",
+  protect,
+  requireTenantAccess,
+  authorizeRoles("TENANT_ADMIN", "SUPER_ADMIN"),
+  getNextBillingController
+);
+
+/**
+ * Criar registro de pagamento manual
+ * POST /api/payments/record
+ */
+router.post(
+  "/record",
+  protect,
+  requireTenantAccess,
+  authorizeRoles("TENANT_ADMIN", "SUPER_ADMIN"),
+  createPaymentController
+);
+
+/**
+ * Atualizar status de pagamento
+ * PATCH /api/payments/:id/status
+ */
+router.patch(
+  "/:id/status",
+  protect,
+  authorizeRoles("TENANT_ADMIN", "SUPER_ADMIN"),
+  updatePaymentStatusController
+);
+
+/**
+ * Buscar limites do plano atual
+ * GET /api/payments/plan-limits
+ */
+router.get(
+  "/plan-limits",
+  protect,
+  requireTenantAccess,
+  authorizeRoles("TENANT_ADMIN", "SUPER_ADMIN"),
+  getPlanLimitsController
+);
 
 export default router;
