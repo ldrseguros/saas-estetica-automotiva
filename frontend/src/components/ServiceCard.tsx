@@ -3,6 +3,7 @@ import { Button } from "./ui/button";
 import { Link } from "react-router-dom";
 import { formatCurrency, formatDuration } from "@/utils/formatters";
 import { Clock, Tag } from "lucide-react";
+import { buildImageUrl } from "../utils/imageUtils.js";
 
 interface ServiceCardProps {
   id: string;
@@ -21,17 +22,20 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
   imageSrc,
   duration,
 }) => {
+  // Construir URL da imagem baseada no ambiente
+  const imageUrl = buildImageUrl(imageSrc);
+
   console.log("ServiceCard RENDERIZADO");
   console.log("[ServiceCard] imageSrc recebido:", imageSrc);
-  console.log("[ServiceCard] src final:", `http://localhost:3000${imageSrc}`);
+  console.log("[ServiceCard] imageUrl final:", imageUrl);
 
   return (
     <>
       <div className="service-card bg-slate-800/60 rounded-lg overflow-hidden border border-slate-700 shadow-lg flex flex-col h-full hover:shadow-brand-red/30 transition-shadow duration-300">
         <div className="service-image-container h-48 bg-slate-700 relative overflow-hidden">
-          {imageSrc ? (
+          {imageUrl ? (
             <img
-              src={`http://localhost:3000${imageSrc}`}
+              src={imageUrl}
               alt={`Imagem do serviço ${title}`}
               className="w-full h-full object-cover transition-transform duration-300 ease-in-out hover:scale-105"
               onError={(e) => {

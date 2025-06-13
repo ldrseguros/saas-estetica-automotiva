@@ -1,12 +1,8 @@
 import axios from "axios";
+import { API_BASE_URL } from "../config/environment.js";
 
 const API = axios.create({
-  baseURL:
-    process.env.NODE_ENV === "development"
-      ? "http://localhost:3000/api" // URL do backend em desenvolvimento
-      : "/api", // URL relativa em produção (assumindo proxy ou o frontend sendo servido pelo backend)
-
-  // Adicionar timeout e tratamento de erros mais detalhado
+  baseURL: API_BASE_URL,
   timeout: 10000, // 10 segundos
 });
 

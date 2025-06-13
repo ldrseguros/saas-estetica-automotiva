@@ -19,6 +19,7 @@ import ModernAdminLayout from "@/components/Admin/ModernAdminLayout";
 import { ModernCard, StatCard } from "@/components/Admin/ModernCard";
 import ModernButton from "@/components/Admin/ModernButton";
 import ModernTable from "@/components/Admin/ModernTable";
+import { buildImageUrl } from "../../utils/imageUtils.js";
 
 interface Service {
   id: string;
@@ -568,7 +569,7 @@ const ServicesPage = () => {
                         {formData.imageSrc ? (
                           <div className="relative">
                             <img
-                              src={`http://localhost:3000${formData.imageSrc}`}
+                              src={buildImageUrl(formData.imageSrc)}
                               alt="Preview"
                               className="mx-auto h-32 w-32 object-cover rounded-lg"
                               onError={(e) => {

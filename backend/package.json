@@ -13,6 +13,7 @@
     "db:generate": "npx prisma generate",
     "db:studio": "npx prisma studio",
     "db:reset": "npx prisma migrate reset --force",
+    "db:clean-production": "node scripts/clean-production-db.js",
     "test-api": "node test-all-endpoints.js"
   },
   "keywords": [],

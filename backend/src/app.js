@@ -34,7 +34,31 @@ const port = process.env.PORT || 3000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-app.use(cors());
+// Configurar CORS para permitir origens específicas
+const allowedOrigins = [
+  "http://localhost:8080", // Frontend local
+  "http://localhost:3000", // Testes locais
+  "https://saas-estetica-automotiva.vercel.app", // URL do Vercel em produção
+  "https://saas-estetica-automotiva.onrender.com", // URL do backend (para testes)
+  process.env.FRONTEND_URL, // URL adicional configurável
+].filter(Boolean); // Remove valores undefined
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Permite requisições sem origin (mobile apps, Postman, etc.) em desenvolvimento
+      if (!origin && process.env.NODE_ENV === "development") {
+        return callback(null, true);
+      }
+      if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+        callback(null, true);
+      } else {
+        callback(new Error("Bloqueado pelo CORS"));
+      }
+    },
+    credentials: true,
+  })
+);
 app.use(express.json()); // Middleware para parsear JSON no corpo da requisição
 app.use(express.urlencoded({ extended: true })); // Middleware para parsear URL-encoded bodies
 
@@ -80,6 +104,15 @@ app.use("/api/finance/methods", methodRoutes);
 
 app.get("/", (req, res) => {
   res.send("Backend is running!");
+});
+
+// Health check para Render
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "healthy",
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+  });
 });
 
 // Middleware de tratamento de erros global
