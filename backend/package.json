@@ -14,6 +14,7 @@
     "db:studio": "npx prisma studio",
     "db:reset": "npx prisma migrate reset --force",
     "db:clean-production": "node scripts/clean-production-db.js",
+    "reset-superadmin": "node reset-superadmin.js",
     "test-api": "node test-all-endpoints.js"
   },
   "keywords": [],
