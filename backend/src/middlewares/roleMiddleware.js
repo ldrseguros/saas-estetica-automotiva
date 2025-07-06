@@ -1,24 +1,21 @@
-/**
- * Middleware to authorize users based on their roles.
- * Assumes that the protect middleware has already run and populated req.user
- */
 export const authorizeRoles = (...allowedRoles) => {
   return (req, res, next) => {
-    if (!req.user) {
-      return res.status(401).json({ message: "Usuário não autenticado." });
+    console.log("[RoleMiddleware] Iniciando autorização de papel."); 
+    console.log("[RoleMiddleware] req.user:", req.user); 
+    console.log("[RoleMiddleware] Papel do usuário (req.user.role):", req.user?.role); 
+    console.log("[RoleMiddleware] Papéis permitidos:", allowedRoles); 
+
+    if (!req.user || !req.user.role) {
+      console.log("[RoleMiddleware] ERRO: Usuário não autenticado ou sem papel. Acesso negado."); 
+      return res.status(403).json({ message: "Acesso negado: Você não possui a permissão necessária." });
     }
 
-    // Check if the user's role is in the allowedRoles array
-    const hasRequiredRole = allowedRoles.includes(req.user.role);
-
-    if (!hasRequiredRole) {
-      return res
-        .status(403)
-        .json({
-          message: "Acesso negado: Você não possui a permissão necessária.",
-        });
+    if (!allowedRoles.includes(req.user.role)) {
+      console.log(`[RoleMiddleware] ERRO: Papel do usuário '${req.user.role}' não permitido. Acesso negado.`); 
+      return res.status(403).json({ message: "Acesso negado: Você não possui a permissão necessária." });
     }
 
-    next(); // User has the required role, proceed to the next middleware/route handler
+    console.log("[RoleMiddleware] Papel permitido. Prosseguindo."); 
+    next();
   };
 };

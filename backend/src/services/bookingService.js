@@ -365,6 +365,9 @@ export const fetchMyBookingsClient = async (authAccountId) => {
 };
 
 export const addNewBookingClient = async (authAccountId, bookingData) => {
+
+  console.log("[addNewBookingClient Service] ---INICIANDO---");
+
   const {
     vehicleId,
     serviceIds,
@@ -375,12 +378,29 @@ export const addNewBookingClient = async (authAccountId, bookingData) => {
     location,
     phone,
   } = bookingData;
+
   const clientProfileId = await getClientProfileIdFromAuthId(authAccountId);
+
+  if(!clientProfileId){
+    throw new Error("Perfil do cliente não encontrado para a conta de autenticação fornecida.")
+  }
+
+  //Obter o tenantId através do AuthAccount
+  const authAccount = await prisma.authAccount.findUnique({
+    where: {id: authAccountId},
+    select: {tenantId: true}
+  });
+
+  if(!authAccount || !authAccount.tenantId){
+    throw new Error("Tenant ID não encontrado para a conta de autenticação.");
+  }
+
+  const tenantId = authAccount.tenantId;
 
   const vehicle = await prisma.vehicle.findUnique({ where: { id: vehicleId } });
   if (!vehicle || vehicle.clientId !== clientProfileId) {
     const error = new Error(
-      "Invalid vehicle or vehicle does not belong to you."
+      "Veículo inválido ou veículo não pertence a você."
     );
     error.statusCode = 403;
     throw error;
@@ -393,11 +413,20 @@ export const addNewBookingClient = async (authAccountId, bookingData) => {
 
   console.log(`Data original do cliente: ${date}`);
   console.log(`Data convertida para objeto Date: ${bookingDate.toISOString()}`);
-
+  
+try{
   return await prisma.booking.create({
     data: {
-      clientId: clientProfileId,
-      vehicleId,
+      client:{
+        connect: {
+          id: clientProfileId,
+        },
+      },
+      vehicle:{
+        connect:{
+          id: vehicleId,
+        },
+      },
       date: bookingDate,
       time,
       status,
@@ -409,9 +438,18 @@ export const addNewBookingClient = async (authAccountId, bookingData) => {
           service: { connect: { id: serviceId } },
         })),
       },
+      tenant: {
+        connect: {
+          id: tenantId,
+        },
+      },
     },
     include: { vehicle: true, services: { include: { service: true } } },
   });
+} catch(e){
+  console.error("Erro ao criar agendamento no Prisma:",e);
+  throw e;
+  }
 };
 
 export const fetchMyBookingByIdClient = async (authAccountId, bookingId) => {

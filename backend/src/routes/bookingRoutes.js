@@ -46,9 +46,9 @@ router
   )
   .get(getBookingByIdAdmin)
   .put(updateBookingAdmin)
-  .delete(deleteBookingAdmin);
+  .delete(deleteBookingAdmin); // NOTE: deleteBookingAdmin é usado aqui também
 
-// Admin routes for booking actions
+// Admin route for booking actions (cancel/complete for specific IDs)
 router
   .route("/:id/cancel")
   .all(
@@ -67,17 +67,7 @@ router
   )
   .patch(completeBookingAdmin);
 
-// Direct delete route for admin
-router
-  .route("/:id")
-  .all(
-    protect,
-    requireTenantAccess,
-    authorizeRoles("TENANT_ADMIN", "SUPER_ADMIN")
-  )
-  .delete(deleteBookingAdmin);
 
-// --- Client routes for managing their own bookings ---
 router
   .route("/client")
   .all(protect, authorizeRoles("CLIENT"))
@@ -88,17 +78,24 @@ router
   .route("/client/:id")
   .all(protect, authorizeRoles("CLIENT"))
   .get(getMyBookingById);
-// Add PUT for cancel, or a specific sub-route like /cancel
 
 router
   .route("/client/:id/cancel")
   .all(protect, authorizeRoles("CLIENT"))
-  .put(cancelMyBooking); // Using PUT for a state change like cancellation
+  .put(cancelMyBooking);
 
-// Rota para reagendamento
 router
   .route("/client/:id/reschedule")
   .all(protect, authorizeRoles("CLIENT"))
   .put(rescheduleMyBooking);
+
+router
+  .route("/:id")
+  .all(
+    protect,
+    requireTenantAccess,
+    authorizeRoles("TENANT_ADMIN", "SUPER_ADMIN")
+  )
+  .delete(deleteBookingAdmin); // Esta rota é para DELETE /api/bookings/:id
 
 export default router;

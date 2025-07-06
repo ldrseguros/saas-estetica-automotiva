@@ -11,6 +11,8 @@ import {
   cancelMyBookingClient,
   // updateMyBookingClient, // Assuming this will be added to service later if needed
 } from "../services/bookingService.js";
+import { log } from "console";
+import { CatalogItem } from "twilio/lib/rest/content/v1/content.js";
 
 const prisma = new PrismaClient();
 
@@ -296,6 +298,8 @@ export const getMyBookings = async (req, res) => {
 // @route   POST /api/client/bookings or /api/bookings/client
 // @access  Client (requires auth)
 export const createMyBooking = async (req, res) => {
+  console.log("[createMyBooking Controller] ---INICIANDO---")
+  
   if (!req.user || !req.user.id) {
     return res.status(401).json({ message: "User not authenticated" });
   }
@@ -329,8 +333,11 @@ export const createMyBooking = async (req, res) => {
       location,
       phone, // Pass phone here
     };
+    console.log("[crateMyBooking Controller] Chamando addNewBookingClient...")
     const newBooking = await addNewBookingClient(authAccountId, bookingData);
+    console.log("[createMyBooking Controller] Agendamento criado com sucesso...")
     res.status(201).json(newBooking);
+
   } catch (error) {
     console.error("Error in createMyBooking controller:", error);
     res
