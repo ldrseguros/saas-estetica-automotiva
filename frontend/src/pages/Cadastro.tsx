@@ -189,7 +189,7 @@ const Cadastro = () => {
               id: "2",
               name: "Profissional",
               description: "Para estéticas em crescimento",
-              price: 199.9,
+              price: 1199.9,
               billingCycle: "monthly",
             },
             {

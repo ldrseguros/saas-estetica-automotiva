@@ -67,7 +67,7 @@ const MetodosPagamento: React.FC = () => {
       refetch();
       setDeleteId(null);
     } catch (error) {
-      console.error("Erro ao excluir método:", error);
+      console.error("Erro ao excluir método de pagamento: ", error);
     } finally {
       setDeleting(false);
     }
@@ -95,7 +95,7 @@ const MetodosPagamento: React.FC = () => {
       setOpenModal(false);
       setSelectedMethod(undefined);
     } catch (error) {
-      console.error("Erro ao salvar método:", error);
+      console.error("Erro ao salvar método de pagamento: ", error);
     }
   };
 

@@ -208,6 +208,20 @@ export const addNewVehicleClient = async (authAccountId, vehicleData) => {
   const { brand, model, year, plate, color } = vehicleData;
   const clientProfileId = await getClientProfileIdFromAuthId(authAccountId);
 
+  if(!clientProfileId){
+    throw new Error("Perfil do cliente não encontrado para a conta de autenticação fornecida.")
+  }
+
+  const authAccount = await prisma.authAccount.findUnique({
+    where: {id : authAccountId},
+    select : {tenantId : true}
+  });
+
+  if(!authAccount || !authAccount.tenantId){
+    throw new Error("Tenant ID não encontrado para o perfil do cliente");
+  }
+  const tenantId = authAccount.tenantId;
+
   try {
     // Permitir múltiplos veículos com a mesma placa, sem verificação de duplicidade
     return await prisma.vehicle.create({
@@ -217,11 +231,20 @@ export const addNewVehicleClient = async (authAccountId, vehicleData) => {
         year: year ? parseInt(year) : null,
         plate,
         color,
-        clientId: clientProfileId,
+        client:{
+          connect: {
+            id: clientProfileId,
+          },
+        },
+        tenant: {
+          connect : {
+            id: tenantId,
+          },
+        },
       },
     });
   } catch (e) {
-    // Tratar apenas outros erros não relacionados à duplicidade de placa
+    console.error("Erro ao adicionar novo veículo para o cliente", e)
     throw e;
   }
 };
