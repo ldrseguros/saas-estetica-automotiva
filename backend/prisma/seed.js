@@ -7,14 +7,14 @@ async function main() {
   // Limpar dados existentes para evitar conflitos
   console.log("Limpando dados existentes...");
   await prisma.$transaction([
-    prisma.bookingService.deleteMany(),
-    prisma.booking.deleteMany(),
-    prisma.vehicle.deleteMany(),
-    prisma.service.deleteMany(),
-    prisma.clientProfile.deleteMany(),
-    prisma.employeeProfile.deleteMany(),
-    prisma.authAccount.deleteMany(),
-    // prisma.subscriptionPayment.deleteMany(), // Comentado para evitar erro se a tabela não existir
+    // prisma.bookingService.deleteMany(),
+    // prisma.booking.deleteMany(),
+    // prisma.vehicle.deleteMany(),
+    // prisma.service.deleteMany(),
+    // prisma.clientProfile.deleteMany(),
+    // prisma.employeeProfile.deleteMany(),
+    // prisma.authAccount.deleteMany(),
+    // // prisma.subscriptionPayment.deleteMany(), // Comentado para evitar erro se a tabela não existir
     prisma.tenant.deleteMany(),
     prisma.subscriptionPlan.deleteMany(),
   ]);
@@ -25,7 +25,7 @@ async function main() {
     data: {
       name: "Básico",
       description: "Ideal para estéticas pequenas que estão começando",
-      price: 99.9,
+      price: 36.99,
       billingCycle: "monthly",
       features: [
         "Agendamentos online",
@@ -37,12 +37,13 @@ async function main() {
       maxClients: 100,
     },
   });
+  console.log("Basic Plan criado", basicPlan);
 
   const proPlan = await prisma.subscriptionPlan.create({
     data: {
       name: "Profissional",
       description: "Perfeito para estéticas em crescimento",
-      price: 199.9,
+      price: 46.99,
       billingCycle: "monthly",
       features: [
         "Todas as funcionalidades do plano Básico",
@@ -54,12 +55,14 @@ async function main() {
       maxClients: 500,
     },
   });
+  console.log("Pro Plan criado", proPlan);
+
 
   const premiumPlan = await prisma.subscriptionPlan.create({
     data: {
       name: "Premium",
       description: "Para estéticas de grande porte com alto volume",
-      price: 299.9,
+      price: 56.99,
       billingCycle: "monthly",
       features: [
         "Todas as funcionalidades do plano Profissional",
@@ -71,6 +74,7 @@ async function main() {
       maxClients: null, // Ilimitado
     },
   });
+  console.log("Premium Plan criado", premiumPlan);
 
   console.log("Criando tenants...");
   // Criar tenants (estéticas)

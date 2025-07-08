@@ -41,6 +41,7 @@ model SubscriptionPlan {
   isActive          Boolean        @default(true)
   maxEmployees      Int            @default(1) // Número máximo de funcionários permitidos
   maxClients        Int?           // Limite de clientes (null = ilimitado)
+  stripePriceId     String?        @unique
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   tenants           Tenant[]
@@ -69,6 +70,7 @@ model Tenant {
   trialEndsAt       DateTime?
   subscriptionEndsAt DateTime?
   stripeCustomerId  String?            // ID do cliente no Stripe
+  stripeSubscriptionId String?
   
   // Customização
   primaryColor      String?            // Cor principal para personalização

@@ -516,7 +516,7 @@ const examplePlans: Plan[] = [
     id: "1",
     name: "Básico",
     description: "Ideal para estéticas pequenas que estão começando",
-    price: 99.9,
+    price: 36.99,
     billingCycle: "monthly",
     features: [
       "Agendamentos online",
@@ -531,7 +531,7 @@ const examplePlans: Plan[] = [
     id: "2",
     name: "Profissional",
     description: "Perfeito para estéticas em crescimento",
-    price: 199.9,
+    price: 46.99,
     billingCycle: "monthly",
     features: [
       "Todas as funcionalidades do plano Básico",
@@ -546,7 +546,7 @@ const examplePlans: Plan[] = [
     id: "3",
     name: "Premium",
     description: "Para estéticas de grande porte com alto volume",
-    price: 299.9,
+    price: 56.99,
     billingCycle: "monthly",
     features: [
       "Todas as funcionalidades do plano Profissional",

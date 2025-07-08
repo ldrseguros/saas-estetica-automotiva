@@ -46,7 +46,7 @@ const Checkout = () => {
         setTimeout(() => {
           setSessionInfo({
             plan: "Profissional",
-            price: 199.9,
+            price: 46.99,
             billingCycle: "monthly",
           });
           setLoading(false);
