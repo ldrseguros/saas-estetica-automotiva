@@ -1,4 +1,4 @@
-import { ENV_CONFIG } from "../config/environment.js";
+import { ENV_CONFIG } from "../config/environment.ts";
 
 /**
  * Constrói URL completa para imagens baseado no ambiente

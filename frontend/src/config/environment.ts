@@ -7,6 +7,8 @@ const config = {
     FRONTEND_URL: "http://localhost:8080",
     STRIPE_PUBLISHABLE_KEY:
       import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "pk_test_...",
+
+       BASE_DOMAIN: "meusaas.com.br",
   },
 
   // URLs de produção
@@ -15,6 +17,8 @@ const config = {
     FRONTEND_URL: "https://saas-estetica-automotiva.vercel.app",
     STRIPE_PUBLISHABLE_KEY:
       import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "pk_live_...",
+    BASE_DOMAIN: "saas-estetica-automotiva.vercel.app",
+   
   },
 };
 

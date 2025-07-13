@@ -1,5 +1,7 @@
 import axios from "axios";
-import { API_BASE_URL } from "../config/environment.js";
+import { API_BASE_URL } from "../config/environment.ts";
+import {getSubdomain} from './urlService';
+// import { get } from "http";
 
 const API = axios.create({
   baseURL: API_BASE_URL,
@@ -11,11 +13,9 @@ API.interceptors.request.use(
   (config) => {
     // Buscar o token diretamente do sessionStorage
     const token = sessionStorage.getItem("token");
-    const user = JSON.parse(sessionStorage.getItem("user") || "{}");
 
     console.group("API Request Interceptor");
     console.log("Token from sessionStorage:", token);
-    console.log("User from sessionStorage:", user);
     console.log("Request URL:", config.url);
     console.log("Request Method:", config.method);
     console.log("Request Params:", config.params);
@@ -23,14 +23,22 @@ API.interceptors.request.use(
 
     // Se houver token e a URL não for para as rotas de auth, adicionar o header Authorization
     if (token && !config.url.includes("/auth")) {
+      config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
       console.log("Added Authorization header:", config.headers.Authorization);
     }
 
-    // Adicionar x-tenant-id para rotas que precisam (principalmente serviços públicos)
-    if (user.tenantId) {
-      config.headers["x-tenant-id"] = user.tenantId;
-      console.log("Added x-tenant-id header:", config.headers["x-tenant-id"]);
+    const tenantIdFromUrl = getSubdomain();
+    const tenantIdFromSession = sessionStorage.getItem("x-tenant-id");
+
+    if (tenantIdFromUrl) {
+      config.headers["X-Tenant-ID"] = tenantIdFromUrl;
+      console.log("Added X-Tenant-ID header (from URL subdomain):", config.headers["X-Tenant-ID"]);
+    } else if(tenantIdFromSession){
+      config.headers["X-Tenant-ID"] = tenantIdFromSession;
+      console.log("Added X-Tenant-ID header (from sessionStorage):", config.headers["X-Tenant-ID"]);
+    } else{
+      console.log("X-Tenant-ID header NOT added (no tenantId from URL or sessionStorage).");
     }
     return config;
   },
@@ -153,9 +161,7 @@ export const fetchMyVehicles = async () => {
   const token = sessionStorage.getItem("token");
 
   try {
-    const response = await axios.get("/api/vehicles/client", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const response = await API.get("/api/vehicles/client",);
     return { data: response.data };
   } catch (error) {
     throw error;
@@ -166,9 +172,7 @@ export const addMyVehicle = async (vehicleData) => {
   const token = sessionStorage.getItem("token");
 
   try {
-    const response = await axios.post("/api/vehicles/client", vehicleData, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const response = await API.post("/api/vehicles/client", vehicleData,);
     return { data: response.data };
   } catch (error) {
     throw error;
@@ -179,12 +183,9 @@ export const updateMyVehicle = async (vehicleId, vehicleData) => {
   const token = sessionStorage.getItem("token");
 
   try {
-    const response = await axios.put(
+    const response = await API.put(
       `/api/vehicles/client/${vehicleId}`,
       vehicleData,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
     );
     return { data: response.data };
   } catch (error) {
@@ -196,8 +197,7 @@ export const deleteMyVehicle = async (vehicleId) => {
   const token = sessionStorage.getItem("token");
 
   try {
-    const response = await axios.delete(`/api/vehicles/client/${vehicleId}`, {
-      headers: { Authorization: `Bearer ${token}` },
+    const response = await API.delete(`/api/vehicles/client/${vehicleId}`, {
     });
     return { data: response.data };
   } catch (error) {
@@ -216,10 +216,9 @@ export const rescheduleMyBooking = async (bookingId, newDate, newTime) => {
   const token = sessionStorage.getItem("token");
 
   try {
-    const response = await axios.put(
+    const response = await API.put(
       `/api/bookings/client/${bookingId}/reschedule`,
       { date: newDate, time: newTime },
-      { headers: { Authorization: `Bearer ${token}` } }
     );
     return { data: response.data };
   } catch (error) {
@@ -234,11 +233,8 @@ export const fetchVehiclesByClientIdAdmin = async (clientId) => {
   console.log(`Fetching vehicles for client ID: ${clientId} (Admin)`);
   const token = sessionStorage.getItem("token");
   try {
-    const response = await axios.get(
+    const response = await API.get(
       `/api/vehicles/admin/clients/${clientId}/vehicles`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
     );
     return { data: response.data };
   } catch (error) {

@@ -252,6 +252,49 @@ router.get("/check-subdomain/:subdomain", async (req, res) => {
 });
 
 /**
+ * Rota pública para obter dados de um tenant (estética) pelo subdomínio.
+ * GET /api/public/tenant-by-subdomain?subdomain=nome_do_subdominio
+ * Esta rota não requer autenticação.
+ */
+
+router.get("/tenant-by-subdomain", async (req, res) => {
+  try {
+    const subdomain = req.query.subdomain;
+
+    if (!subdomain) {
+      return res.status(400).json({ message: "Subdomínio não fornecido." });
+    }
+
+    const tenant = await prisma.tenant.findUnique({
+      where: { subdomain: subdomain },
+      select: {
+        id: true,
+        name: true,
+        logo: true,
+        primaryColor: true,
+        secondaryColor: true,
+      },
+    });
+
+    if (!tenant) {
+      return res.status(404).json({ message: "Estética não encontrada para este subdomínio." });
+    }
+
+    res.json({
+      tenantId: tenant.id,
+      tenantName: tenant.name,
+      tenantLogo: tenant.logo,
+      primaryColor: tenant.primaryColor,
+      secondaryColor: tenant.secondaryColor,
+    });
+
+  } catch (error) {
+    console.error("Erro ao buscar tenant por subdomínio: ", error);
+    res.status(500).json({ message: "Erro interno do servidor." });
+  }
+});
+
+/**
  * Cadastrar contato de interesse (lead)
  * POST /api/public/contact
  */

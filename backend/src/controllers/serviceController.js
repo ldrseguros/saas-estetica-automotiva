@@ -17,11 +17,12 @@ const prisma = new PrismaClient();
 export const getAllServices = async (req, res) => {
   try {
     // Obter tenantId do usuário autenticado
-    const tenantId = req.user.tenantId;
-    if (!tenantId) {
+    const tenantId = req.tenantId;
+
+    if(!tenantId){
       return res
-        .status(400)
-        .json({ message: "TenantId não encontrado no usuário" });
+      .status(400)
+      .json({ message: "TenantId não resolvido para listar serviços" });
     }
 
     const services = await findAllServices(tenantId);
@@ -41,7 +42,7 @@ export const getAllServices = async (req, res) => {
 export const getPublicServices = async (req, res) => {
   try {
     // Para services públicos, precisamos do tenantId do header ou subdomínio
-    const tenantId = req.headers["x-tenant-id"];
+    const tenantId = req.tenantId;
     if (!tenantId) {
       return res
         .status(400)
@@ -108,11 +109,11 @@ export const getServiceById = async (req, res) => {
   const { id } = req.params;
   try {
     // Obter tenantId do usuário autenticado
-    const tenantId = req.user.tenantId;
+    const tenantId = req.tenantId;
     if (!tenantId) {
       return res
         .status(400)
-        .json({ message: "TenantId não encontrado no usuário" });
+        .json({ message: "TenantId não resolvido para buscar serviço por ID." });
     }
 
     const service = await findServiceById(id, tenantId);

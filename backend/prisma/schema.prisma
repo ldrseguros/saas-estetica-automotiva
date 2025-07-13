@@ -51,7 +51,7 @@ model SubscriptionPlan {
 model Tenant {
   id                String             @id @default(uuid())
   name              String             // Nome do negócio
-  subdomain         String?            @unique // Para URL personalizada
+  subdomain         String            @unique // Para URL personalizada
   logo              String?            // URL do logo
   contactEmail      String
   contactPhone      String?

@@ -86,6 +86,8 @@ router.post(
         return res.status(400).json({ message: "Plano não encontrado" });
       }
 
+      const stripePriceId = plan.stripePriceId;
+
       // Resolver tenantId - se for "current", usar o tenantId do usuário logado
       const resolvedTenantId =
         tenantId === "current" ? req.user.tenantId : tenantId;
@@ -108,15 +110,12 @@ router.post(
         return res.status(400).json({ message: "Tenant não encontrado" });
       }
 
-      // Criar um produto no Stripe para o plano (se não existir)
-      let stripeProductId = await getOrCreateStripeProduct(plan.name);
+      // Usar o stripePriceId já armazenado no banco de dados do plano
+      const stripePricId = plan.stripePriceId;
 
-      // Criar ou recuperar um preço no Stripe
-      const stripePriceId = await getOrCreateStripePrice(
-        stripeProductId,
-        plan.price,
-        plan.billingCycle
-      );
+      if(!stripePriceId){
+        return res.status(500).json({ message: "Id do preço Stripe não configurado para este plano" });
+      }
 
       // Criar a sessão de checkout
       const session = await stripe.checkout.sessions.create({
@@ -151,6 +150,7 @@ router.post(
  * Webhook para eventos do Stripe
  * POST /api/payments/webhook
  */
+
 router.post(
   "/webhook",
   express.raw({ type: "application/json" }),

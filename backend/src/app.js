@@ -4,7 +4,7 @@ dotenv.config();
 import express from "express";
 import Stripe from "stripe"
 import cors from "cors";
-import path from "path";
+import path, { resolve } from "path";
 import { fileURLToPath } from "url";
 import authRoutes from "./routes/auth.js";
 import protectedRoutes from "./routes/protected.js"; // Importar as rotas protegidas
@@ -25,7 +25,8 @@ import tenantRoutes from "./routes/tenantRoutes.js"; // Rotas para gerenciar ten
 import publicRoutes from "./routes/publicRoutes.js"; // Rotas públicas da landing page
 import paymentRoutes from "./routes/paymentRoutes.js"; // Rotas para processamento de pagamentos
 
-import { tenantMiddleware } from "./middlewares/tenantMiddleware.js"; // Middleware para identificar tenant
+// import { tenantMiddleware } from "./middlewares/tenantMiddleware.js"; // Middleware para identificar tenant
+import { resolveTenantId } from './middlewares/tenantResolver.js';
 
 import transactionRoutes from "./routes/finance/transactions.js";
 import categoryRoutes from "./routes/finance/categories.js";
@@ -51,9 +52,14 @@ const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
 // Configurar CORS para permitir origens específicas
 const allowedOrigins = [
     "http://localhost:8080", // Frontend local
+    "http://192.168.0.20:8080",
     "http://localhost:3000", // Testes locais
     "https://saas-estetica-automotiva.vercel.app", // URL do Vercel em produção
-    "https://saas-estetica-automotiva.onrender.com", // URL do backend (para testes)
+    "https://saas-estetica-automotiva.onrender.com",
+    "http://esteticaas.meusaas.com.br:8080",
+    "http://admin.meusaas.com.br:8080",
+    "http://painel.meusaas.com.br:8080",
+    "http://belezaurbana.meusaas.com.br:8080", // URL do backend (para testes)
     process.env.FRONTEND_URL, // URL adicional configurável
 ].filter(Boolean); // Remove valores undefined
 
@@ -64,9 +70,10 @@ app.use(
             if (!origin && process.env.NODE_ENV === "development") {
                 return callback(null, true);
             }
-            if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+            if (allowedOrigins.indexOf(origin) !== -1) {
                 callback(null, true);
             } else {
+                console.error(`CORS BLOCKED: Origin ${origin} is not in allowed list.`);
                 callback(new Error("Bloqueado pelo CORS"));
             }
         },
@@ -378,12 +385,15 @@ app.use(express.urlencoded({ extended: true }));
 // Configurar pasta de uploads como estática
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
+app.use('/api', resolveTenantId); // Middleware para resolver o tenantId antes de qualquer rota
+
+
 // Rotas públicas (sem autenticação)
 app.use("/api/public", publicRoutes); // Rotas da landing page, planos, etc.
 app.use("/api/auth", authRoutes); // Usar as rotas de autenticação sob o prefixo /api/auth
 
 // Middleware para identificar o tenant baseado no subdomain ou header
-app.use(tenantMiddleware);
+// app.use(tenantMiddleware);
 
 // Rotas para pagamentos
 app.use("/api/payments", paymentRoutes);

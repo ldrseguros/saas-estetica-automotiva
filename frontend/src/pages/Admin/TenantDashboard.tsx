@@ -1,3 +1,5 @@
+import API from "@/utils/apiService";
+
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -104,43 +106,24 @@ const TenantDashboard = () => {
         setLoading(true);
         setError(null);
 
-        const token = sessionStorage.getItem("token");
-        if (!token) {
-          throw new Error("Token de autenticação não encontrado");
-        }
-
         // Buscar estatísticas do dashboard
-        const statsResponse = await fetch("/api/admin/dashboard/stats", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
+        const statsResponse = await API.get("/admin/dashboard/stats");
+        const stats = statsResponse.data;
 
-        if (!statsResponse.ok) {
-          throw new Error("Erro ao buscar estatísticas do dashboard");
-        }
 
-        const stats = await statsResponse.json();
 
         // Buscar agendamentos recentes (próximos)
         const now = new Date();
         const fromDate = now.toISOString().split("T")[0];
-        const bookingsResponse = await fetch(
-          `/api/bookings/admin?limit=5&fromDate=${fromDate}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
+        const bookingResponse = await API.get("/bookings/admin",{
+          params:{
+            limit: 5,
+            fromDate: fromDate
           }
-        );
+        });
 
-        if (!bookingsResponse.ok) {
-          throw new Error("Erro ao buscar agendamentos");
-        }
+        const bookingsData = bookingResponse.data;
 
-        const bookingsData = await bookingsResponse.json();
         const allBookingsRaw: BookingApi[] =
           bookingsData.bookings || bookingsData; // Compatibilidade com ambos os formatos
 
@@ -183,35 +166,17 @@ const TenantDashboard = () => {
           .slice(0, 5); // Mostrar apenas os próximos 5
 
         // Buscar total de clientes
-        const clientsResponse = await fetch("/api/admin/users", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
+        const clientsResponse = await API.get("/admin/users");
+        const allUsersResponse = clientsResponse.data;
 
-        if (!clientsResponse.ok) {
-          throw new Error("Erro ao buscar clientes");
-        }
-
-        const allUsersResponse = await clientsResponse.json();
         const totalClients = (allUsersResponse.users || []).filter(
           (user: { role: string }) => user.role === "CLIENT"
         ).length;
 
         // Buscar total de serviços
-        const servicesResponse = await fetch("/api/services/admin", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
+        const servicesResponse = await API.get("/services/admin");
+        const allServices = servicesResponse.data;
 
-        if (!servicesResponse.ok) {
-          throw new Error("Erro ao buscar serviços");
-        }
-
-        const allServices = await servicesResponse.json();
         const totalServices = allServices.length;
 
         // Buscar dados financeiros
@@ -224,27 +189,11 @@ const TenantDashboard = () => {
         };
 
         try {
-          const financialResponse = await fetch(
-            "/api/admin/financial/summary",
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
-          );
+          const financialResponse = await API.get("/admin/financial/summary");
 
-          if (financialResponse.ok) {
-            const financialData = await financialResponse.json();
-            financial = financialData;
-          } else {
-            console.warn(
-              "Dados financeiros não disponíveis, usando valores padrão"
-            );
-          }
+          financial = financialResponse.data;
         } catch (financialError) {
           console.warn("Erro ao buscar dados financeiros:", financialError);
-          // Usar valores padrão em caso de erro
         }
 
         setDashboardData({

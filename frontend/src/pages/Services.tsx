@@ -1,3 +1,4 @@
+import API from "@/utils/apiService";
 import React, { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -11,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { set } from "date-fns";
 
 // Interface for Service data from backend
 interface Service {
@@ -32,13 +34,9 @@ const Services: React.FC = () => {
     const fetchServices = async () => {
       setIsLoading(true);
       try {
-        // Use proxied path with Vite proxy configuration
-        const response = await fetch("/api/services");
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        setServices(data);
+        const response = await API.get("/services");
+        setServices(response.data);
+        
       } catch (err) {
         console.error("Failed to fetch services:", err);
         toast.error("Falha ao carregar serviços. Tente novamente mais tarde.");

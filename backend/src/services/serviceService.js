@@ -10,11 +10,23 @@ export const findAllServices = async (tenantId) => {
     throw error;
   }
 
-  return await prisma.service.findMany({
-    where: {
-      tenantId: tenantId, // FILTRO POR TENANT
-    },
-  });
+  console.log(`[DEBUG - findAllServices] Filtering by tenantId: '${tenantId}'(Tipo: ${typeof tenantId}), Comprimento: ${tenantId.length})`);
+
+  try{
+    const allServices = await prisma.service.findMany({});
+    console.log(`[DEBUG - findAllServices] Total de serviços no DB(sem filtro): ${allServices.length}`);
+
+    const services = await prisma.service.findMany({
+      where: {
+        tenantId: tenantId, // FILTRO POR TENANT
+      },
+    });
+    console.log(`[DEBUG - findAllServices] Serviços encontrados com filtro para '${tenantId}': ${services.length} serviços`, services);
+    return services;
+  } catch (error) {
+    console.error("[ERROR - findAllServices] Erro ao buscar serviços:",error);
+    throw error;
+  }
 };
 
 export const addNewService = async (serviceData) => {
