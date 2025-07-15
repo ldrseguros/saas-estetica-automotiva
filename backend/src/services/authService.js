@@ -5,36 +5,59 @@ import prisma from "../lib/prisma.js";
 const JWT_SECRET = process.env.JWT_SECRET;
 
 export const registerNewClient = async (clientData) => {
-  const { email, password, name, whatsapp } = clientData;
+  const { email, password, name, whatsapp, tenantId } = clientData;
 
-  const existingAccount = await prisma.authAccount.findUnique({
-    where: { email },
+  const existingAuthAccount = await prisma.authAccount.findUnique({
+    where: {
+      email,
+      tenantId,
+    },
   });
-  if (existingAccount) {
-    const error = new Error("Conta já existe.");
-    error.statusCode = 409; // Conflict
-    throw error;
+
+  if (existingAuthAccount) {
+    throw new Error("Este email já está registrado para este tenant.");
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  const account = await prisma.authAccount.create({
-    data: {
-      email,
-      password: hashedPassword,
-      role: "CLIENT",
-      client: {
-        create: {
-          name,
-          whatsapp: whatsapp || null,
-        },
+  const result = await prisma.$transaction(async (tx) => {
+    const authAccount = await tx.authAccount.create({
+      data: {
+        email,
+        passwordHash: hashedPassword, 
+        role: "CLIENT",
+        tenantId,
       },
-    },
-    include: { client: true }, // Include client profile in the return
+    });
+
+    const clientProfile = await tx.clientProfile.create({
+      data: {
+        name,
+        whatsapp,
+        tenant: {
+          connect: {
+            id: tenantId
+          },
+        },
+        account:{
+          connect:{
+            id: authAccount.id,
+          }
+        }
+      },
+    });
+
+
+    return {
+      id: authAccount.id,
+      email: authAccount.email,
+      role: authAccount.role,
+      tenantId: authAccount.tenantId,
+      profile: clientProfile,
+    };
   });
 
-  // Return only the client profile part, or whatever the controller needs
-  return account.client;
+  return result; // Retorna o resultado da transação
 };
 
 export const authenticateUser = async (credentials) => {
@@ -42,7 +65,15 @@ export const authenticateUser = async (credentials) => {
 
   const account = await prisma.authAccount.findUnique({
     where: { email },
-    include: { employee: true, client: true },
+    select: {
+     id: true,
+      email: true,
+      role: true,
+      tenantId: true,
+      passwordHash: true, 
+      employee: true, 
+      client: true,  
+    }
   });
 
   if (!account) {
@@ -51,7 +82,7 @@ export const authenticateUser = async (credentials) => {
     throw error;
   }
 
-  const isPasswordValid = await bcrypt.compare(password, account.password);
+  const isPasswordValid = await bcrypt.compare(password, account.passwordHash);
   if (!isPasswordValid) {
     const error = new Error("Email ou senha inválidos.");
     error.statusCode = 401;
@@ -111,7 +142,7 @@ export const registerNewEmployee = async (employeeData) => {
   const account = await prisma.authAccount.create({
     data: {
       email,
-      password: hashedPassword,
+      passwordHash: hashedPassword,
       role,
       employee: { create: { name } },
     },

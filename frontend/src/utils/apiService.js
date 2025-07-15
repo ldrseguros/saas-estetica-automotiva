@@ -1,17 +1,18 @@
 import axios from "axios";
 import { API_BASE_URL } from "../config/environment.ts";
-import {getSubdomain} from './urlService';
-// import { get } from "http";
+import { getSubdomain } from './urlService';
 
 const API = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 10000, // 10 segundos
+  baseURL: API_BASE_URL, // Assumindo que API_BASE_URL é 'http://localhost:3000/api'
+  withCredentials: true,
+  headers: {
+    'Content-Type': 'application/json',
+  }
 });
 
 // Adicionar interceptor para incluir o token JWT nas requisições (exceto login/register)
 API.interceptors.request.use(
   (config) => {
-    // Buscar o token diretamente do sessionStorage
     const token = sessionStorage.getItem("token");
 
     console.group("API Request Interceptor");
@@ -21,7 +22,6 @@ API.interceptors.request.use(
     console.log("Request Params:", config.params);
     console.groupEnd();
 
-    // Se houver token e a URL não for para as rotas de auth, adicionar o header Authorization
     if (token && !config.url.includes("/auth")) {
       config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
@@ -34,10 +34,10 @@ API.interceptors.request.use(
     if (tenantIdFromUrl) {
       config.headers["X-Tenant-ID"] = tenantIdFromUrl;
       console.log("Added X-Tenant-ID header (from URL subdomain):", config.headers["X-Tenant-ID"]);
-    } else if(tenantIdFromSession){
+    } else if (tenantIdFromSession) {
       config.headers["X-Tenant-ID"] = tenantIdFromSession;
       console.log("Added X-Tenant-ID header (from sessionStorage):", config.headers["X-Tenant-ID"]);
-    } else{
+    } else {
       console.log("X-Tenant-ID header NOT added (no tenantId from URL or sessionStorage).");
     }
     return config;
@@ -68,13 +68,10 @@ API.interceptors.response.use(
     });
     console.groupEnd();
 
-    // Tratamento específico para diferentes tipos de erros
     if (error.response) {
-      // O servidor respondeu com um status de erro
       switch (error.response.status) {
         case 401:
           console.error("Unauthorized: Token may be invalid or expired");
-          // Redirecionar para login ou fazer refresh do token
           break;
         case 403:
           console.error("Forbidden: You don't have permission");
@@ -87,10 +84,8 @@ API.interceptors.response.use(
           break;
       }
     } else if (error.request) {
-      // A requisição foi feita, mas não houve resposta
       console.error("No response received:", error.request);
     } else {
-      // Algo aconteceu na configuração da requisição que causou o erro
       console.error("Error setting up request:", error.message);
     }
 
@@ -100,68 +95,47 @@ API.interceptors.response.use(
 
 // Funções para as chamadas de API
 export const registerUser = (userData) => API.post("/auth/register", userData);
-
 export const loginUser = (credentials) => API.post("/auth/login", credentials);
-
-// Adicionar função de busca de usuários com mais detalhes
 export const fetchUsers = (params) => {
   console.log("Fetching users with params:", params);
   return API.get("/admin/users", { params });
 };
-
 export const fetchClients = (params) => {
   console.log("Fetching clients with params:", params);
   return API.get("/admin/users", { params });
 };
-
-// Exemplo de chamada para rota protegida
 export const getProtectedData = () => API.get("/protected/data");
-
-// --- Service API Calls ---
 export const fetchAdminServices = () => {
   console.log("Fetching admin services");
   return API.get("/services");
 };
-
 export const fetchPublicServices = () => {
   console.log("Fetching public services");
   return API.get("/services");
 };
-
 export const createService = (serviceData) => {
   console.log("Creating service:", serviceData);
   return API.post("/services", serviceData);
 };
-
 export const updateService = (serviceId, serviceData) => {
   console.log(`Updating service ${serviceId}:`, serviceData);
   return API.put(`/services/${serviceId}`, serviceData);
 };
-
 export const deleteService = (serviceId) => {
   console.log(`Deleting service ${serviceId}`);
   return API.delete(`/services/${serviceId}`);
 };
-
-// --- Client Specific API Calls ---
-
-// Bookings for the logged-in client
 export const fetchMyBookings = () => API.get("/bookings/client");
-
 export const createBooking = (bookingData) =>
   API.post("/bookings/client", bookingData);
-
 export const cancelMyBooking = (bookingId) =>
   API.put(`/bookings/client/${bookingId}/cancel`);
-// If backend expects a payload for cancellation (e.g., reason), add it as a second arg to put
-// export const cancelMyBooking = (bookingId, cancellationData) => API.put(`/bookings/client/${bookingId}/cancel`, cancellationData);
 
-// Vehicles for the logged-in client
+// --- As funções de VEÍCULOS corrigidas ---
 export const fetchMyVehicles = async () => {
   const token = sessionStorage.getItem("token");
-
   try {
-    const response = await API.get("/api/vehicles/client",);
+    const response = await API.get("/vehicles/client"); // REMOVIDO o "/api"
     return { data: response.data };
   } catch (error) {
     throw error;
@@ -170,9 +144,8 @@ export const fetchMyVehicles = async () => {
 
 export const addMyVehicle = async (vehicleData) => {
   const token = sessionStorage.getItem("token");
-
   try {
-    const response = await API.post("/api/vehicles/client", vehicleData,);
+    const response = await API.post("/vehicles/client", vehicleData); // REMOVIDO o "/api"
     return { data: response.data };
   } catch (error) {
     throw error;
@@ -181,10 +154,9 @@ export const addMyVehicle = async (vehicleData) => {
 
 export const updateMyVehicle = async (vehicleId, vehicleData) => {
   const token = sessionStorage.getItem("token");
-
   try {
     const response = await API.put(
-      `/api/vehicles/client/${vehicleId}`,
+      `/vehicles/client/${vehicleId}`, // REMOVIDO o "/api"
       vehicleData,
     );
     return { data: response.data };
@@ -195,9 +167,8 @@ export const updateMyVehicle = async (vehicleId, vehicleData) => {
 
 export const deleteMyVehicle = async (vehicleId) => {
   const token = sessionStorage.getItem("token");
-
   try {
-    const response = await API.delete(`/api/vehicles/client/${vehicleId}`, {
+    const response = await API.delete(`/vehicles/client/${vehicleId}`, { // REMOVIDO o "/api"
     });
     return { data: response.data };
   } catch (error) {
@@ -205,19 +176,14 @@ export const deleteMyVehicle = async (vehicleId) => {
   }
 };
 
-// --- Booking flow API calls ---
-
-// Get available time slots for a specific date
 export const fetchAvailableTimeSlots = (date) =>
   API.get("/bookings/available-slots", { params: { date } });
 
-// Função para reagendar um agendamento do cliente logado
 export const rescheduleMyBooking = async (bookingId, newDate, newTime) => {
   const token = sessionStorage.getItem("token");
-
   try {
     const response = await API.put(
-      `/api/bookings/client/${bookingId}/reschedule`,
+      `/api/bookings/client/${bookingId}/reschedule`, // Este parece estar correto como está, pois tem apenas um /api
       { date: newDate, time: newTime },
     );
     return { data: response.data };
@@ -226,15 +192,12 @@ export const rescheduleMyBooking = async (bookingId, newDate, newTime) => {
   }
 };
 
-// --- Admin API Calls ---
-
-// Fetch vehicles by client ID for admin area
 export const fetchVehiclesByClientIdAdmin = async (clientId) => {
   console.log(`Fetching vehicles for client ID: ${clientId} (Admin)`);
   const token = sessionStorage.getItem("token");
   try {
     const response = await API.get(
-      `/api/vehicles/admin/clients/${clientId}/vehicles`,
+      `/vehicles/admin/clients/${clientId}/vehicles`, // REMOVIDO o "/api"
     );
     return { data: response.data };
   } catch (error) {
@@ -243,4 +206,4 @@ export const fetchVehiclesByClientIdAdmin = async (clientId) => {
   }
 };
 
-export default API; // Exportar a instância configurada do axios também, se necessário
+export default API;

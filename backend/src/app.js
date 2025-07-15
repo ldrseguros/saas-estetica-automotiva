@@ -381,7 +381,7 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
 // Middlewares para parsear JSON no corpo da requisição (para todas as outras rotas)
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
+    
 // Configurar pasta de uploads como estática
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 

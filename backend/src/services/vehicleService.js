@@ -205,48 +205,46 @@ export const fetchMyVehiclesClient = async (authAccountId) => {
 };
 
 export const addNewVehicleClient = async (authAccountId, vehicleData) => {
-  const { brand, model, year, plate, color } = vehicleData;
-  const clientProfileId = await getClientProfileIdFromAuthId(authAccountId);
+    const { brand, model, year, plate, color } = vehicleData;
 
-  if(!clientProfileId){
-    throw new Error("Perfil do cliente não encontrado para a conta de autenticação fornecida.")
-  }
-
-  const authAccount = await prisma.authAccount.findUnique({
-    where: {id : authAccountId},
-    select : {tenantId : true}
-  });
-
-  if(!authAccount || !authAccount.tenantId){
-    throw new Error("Tenant ID não encontrado para o perfil do cliente");
-  }
-  const tenantId = authAccount.tenantId;
-
-  try {
-    // Permitir múltiplos veículos com a mesma placa, sem verificação de duplicidade
-    return await prisma.vehicle.create({
-      data: {
-        brand,
-        model,
-        year: year ? parseInt(year) : null,
-        plate,
-        color,
-        client:{
-          connect: {
-            id: clientProfileId,
-          },
-        },
-        tenant: {
-          connect : {
-            id: tenantId,
-          },
-        },
-      },
+    const clientProfile = await prisma.clientProfile.findUnique({
+        where: { accountId: authAccountId },
+        select: { id: true, tenantId: true } // Selecione o tenantId diretamente aqui
     });
-  } catch (e) {
-    console.error("Erro ao adicionar novo veículo para o cliente", e)
-    throw e;
-  }
+
+    if (!clientProfile || !clientProfile.tenantId) {
+        const error = new Error("Perfil do cliente ou Tenant ID não encontrado para a conta de autenticação fornecida.");
+        error.statusCode = 403; // Ou 404, dependendo da sua regra de negócio
+        throw error;
+    }
+
+    const clientProfileId = clientProfile.id;
+    const tenantId = clientProfile.tenantId;
+
+    try {
+        return await prisma.vehicle.create({
+            data: {
+                brand,
+                model,
+                year: year ? parseInt(year) : null,
+                plate,
+                color,
+                client: {
+                    connect: { id: clientProfileId },
+                },
+                tenant: { // Já está correto aqui
+                    connect : {
+                        id: tenantId,
+                    },
+                },
+            },
+        });
+    } catch (e) {
+        console.error("Erro ao adicionar novo veículo para o cliente", e);
+        // IMPORTANTE: Adicione o stack trace aqui também
+        console.error("Stack Trace do erro no service:", e.stack);
+        throw e;
+    }
 };
 
 export const fetchMyVehicleByIdClient = async (authAccountId, vehicleId) => {

@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { fetchMyVehicles, addMyVehicle } from "@/utils/apiService";
+import {fetchMyVehicles, addMyVehicle} from "@/utils/apiService.js";
 import { Loader2 } from "lucide-react";
 
 interface Vehicle {

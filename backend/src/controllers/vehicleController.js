@@ -182,13 +182,18 @@ export const getMyVehicles = async (req, res) => {
 // @route   POST /api/client/vehicles
 // @access  Client
 export const createMyVehicle = async (req, res) => {
+  console.log("--> ENTROU NA FUNÇÃO createMyVehicle NO CONTROLLER <-- ");
+
+
   const { brand, model, year, plate, color } = req.body;
   if (!brand || !model || !plate) {
+    console.error("Dados de entrada ausentes para veículo (Controller):", {brand, model, plate});
     return res
       .status(400)
       .json({ message: "Brand, model, and plate are required." });
   }
   try {
+    console.log("Auth Account ID do usuário logado:", req.user.id);
     const newVehicle = await addNewVehicleClientService(req.user.id, {
       brand,
       model,
@@ -196,9 +201,12 @@ export const createMyVehicle = async (req, res) => {
       plate,
       color,
     });
+    console.log("Veículo criado com sucesso(Controller):", newVehicle);
     res.status(201).json(newVehicle);
   } catch (error) {
     console.error("Error in createMyVehicle controller:", error);
+    console.error("Mensagem de erro:", error.message);
+    console.error("Stack do erro:", error.stack);
     res
       .status(error.statusCode || 500)
       .json({ message: error.message || "Error creating client vehicle" });

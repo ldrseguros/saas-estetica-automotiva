@@ -83,6 +83,7 @@ model Tenant {
   vehicles          Vehicle[]
   whatsAppMessages  WhatsAppMessage[]
   whatsAppTemplates WhatsAppTemplate[]
+  clientProfiles       ClientProfile[]
   
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
@@ -92,7 +93,7 @@ model Tenant {
 model AuthAccount {
   id         String           @id @default(uuid())
   email      String           @unique
-  password   String           // Hashed password
+  passwordHash   String           // Hashed password
   role       Role
   createdAt  DateTime         @default(now())
   updatedAt  DateTime         @updatedAt
@@ -131,6 +132,8 @@ model ClientProfile {
   whatsappMessages WhatsAppMessage[]
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
+  tenant         Tenant?          @relation(fields: [tenantId], references: [id])
+  tenantId       String
 }
 
 // Definição para templates de mensagens do WhatsApp

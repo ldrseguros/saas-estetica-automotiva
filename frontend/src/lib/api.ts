@@ -66,7 +66,7 @@ interface BookingData {
   notes?: string;
 }
 
-import { API_BASE_URL } from "../config/environment.ts";
+import { API_BASE_URL } from "../config/environment";
 
 // Configuração base do axios
 const api = axios.create({
@@ -86,19 +86,38 @@ api.interceptors.request.use((config) => {
 
   // Adicionar o tenant ID para chamadas em subdominios
   const hostname = window.location.hostname;
+  let tenantSubdomain = "";
 
-  // Se não for localhost e tiver subdomínio
-  if (
-    hostname !== "localhost" &&
-    !hostname.startsWith("192.168.") &&
-    hostname.includes(".")
-  ) {
-    const subdomain = hostname.split(".")[0];
+  console.log(`[FrontEnd Interceptor] Hostname atual: ${hostname}`);
 
-    // Evitar adicionar 'www' como tenant
-    if (subdomain !== "www") {
-      config.headers["X-Tenant-ID"] = subdomain;
-    }
+  //Cenário de subdomínio real (produção)
+  if(hostname.includes(".meusaas.com.br")) {
+    tenantSubdomain = hostname.split(".")[0];
+    console.log(`[FrontEnd Interceptor] Subdomínio detectado(produção): ${tenantSubdomain}`);
+  }
+  //Cenário de subdomínio local (desenvolvimento com arquivos hosts)
+  else if(hostname.includes(".localhost")) {
+    tenantSubdomain = hostname.split(".")[0];
+    console.log(`[FrontEnd Interceptor] Subdomínio detectado(local): ${tenantSubdomain}`);
+  }
+  //Cenário de localhost puro(sem subdomínio)
+  else if(hostname === 'localhost' || hostname === '127.0.0.1'){
+    tenantSubdomain = "esteticaas"; //defiana o subdomínio do seu tenant de desenvlvimento
+    console.log(`[FrontEnd interceptor] Subdomínio fixo para localhost: ${tenantSubdomain}`);
+  }
+
+  //Evitar adicionar 'www' como tenant
+  if(tenantSubdomain === "www"){
+    tenantSubdomain = "";
+    console.warn("[FrontEnd Interceptor] 'www' detectado como subdomínio. Não será usado como X-Tenant-ID.");
+  }
+
+  //Se um subdomínio foi detectado, adiciona o header X-Tenant-ID
+  if(tenantSubdomain){
+    config.headers["X-Tenant-ID"] = tenantSubdomain;
+    console.log(`[FrontEnd Interceptor] X-Tenant-ID adicionado ao cabeçalho: ${tenantSubdomain}`);
+  } else{
+    console.warn("[FrontEnd Interceptor] X-Tenant-ID NÃO ADICIONADO. Subdomínio não detectado ou inválido.");
   }
 
   return config;

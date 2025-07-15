@@ -7,8 +7,10 @@ import {
 // Basic auth controller functions
 
 export const registerClient = async (req, res) => {
-  console.log("Dados recebidos para registro no controller:", req.body);
+  console.log("Dados recebidos para registro do CLIENTE no controller:", req.body);
   const { email, password, name, whatsapp } = req.body;
+
+  const tenantId = req.tenantId;
 
   // Basic validation (can be expanded or moved to middleware)
   if (!email || !password || !name) {
@@ -17,12 +19,18 @@ export const registerClient = async (req, res) => {
       .json({ message: "Email, senha e nome são obrigatórios." });
   }
 
+  if(!tenantId){
+    console.error("Erro: tenantId não encontrado no request para registro de cliente.");
+    return res.status(400).json({message: "Tenant não identificado para registro."});
+  }
+
   try {
     const clientProfile = await registerNewClient({
       email,
       password,
       name,
       whatsapp,
+      tenantId,
     });
     console.log("Cliente registrado com sucesso pelo serviço:", clientProfile);
     res.status(201).json({

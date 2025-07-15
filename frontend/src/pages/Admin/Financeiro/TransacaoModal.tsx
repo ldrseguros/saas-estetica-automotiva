@@ -160,7 +160,7 @@ const TransacaoModal: React.FC<Props> = ({
         tenantId,
       };
 
-      console.log("📤 Debug TransacaoModal - payload final:", payload);
+      console.log("Debug TransacaoModal - payload final:", payload);
 
       if (transacao) {
         await axios.put(`/api/finance/transactions/${transacao.id}`, payload);
@@ -170,7 +170,7 @@ const TransacaoModal: React.FC<Props> = ({
       onSaved();
       onClose();
     } catch (error) {
-      console.error("❌ Erro ao salvar transação:", error);
+      console.error("Erro ao salvar transação:", error);
       if (axios.isAxiosError(error)) {
         console.error("📋 Detalhes do erro:", error.response?.data);
         console.error("📋 Status do erro:", error.response?.status);
