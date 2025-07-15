@@ -4,30 +4,32 @@ dotenv.config();
 import express from "express";
 import Stripe from "stripe"
 import cors from "cors";
-import path, { resolve } from "path";
+import path from "path";
 import { fileURLToPath } from "url";
-import authRoutes from "./routes/auth.js";
-import protectedRoutes from "./routes/protected.js"; // Importar as rotas protegidas
-import userRoutes from "./routes/userRoutes.js"; // Importar as novas rotas de usuário
-import bookingRoutes from "./routes/bookingRoutes.js"; // Importar as rotas de agendamento (admin e client)
-import serviceRoutes from "./routes/serviceRoutes.js"; // Importar as novas rotas de serviço
-import vehicleRoutes from "./routes/vehicleRoutes.js"; // Importar as rotas de veículo (admin e client)
-import dashboardRoutes from "./routes/dashboardRoutes.js"; // Importar as rotas do dashboard
-import whatsappRoutes from "./routes/whatsappRoutes.js"; // Importar as rotas de WhatsApp
-import emailRoutes from "./routes/emailRoutes.js";
-import financialRoutes from "./routes/financialRoutes.js"; // Importar as rotas de email
-import settingsRoutes from "./routes/settingsRoutes.js"; // Importar as rotas de configurações
-import adminSubscriptionRoutes from "./routes/adminSubscriptionRoutes.js"; // Importar as rotas de planos para admin
 
-// Novas rotas para o SaaS
-import subscriptionRoutes from "./routes/subscriptionRoutes.js"; // Rotas para gerenciar assinaturas
-import tenantRoutes from "./routes/tenantRoutes.js"; // Rotas para gerenciar tenants
+// Importar todos os seus middlewares
+import { resolveTenantId } from './middlewares/tenantResolver.js';
+import { protect } from './middlewares/authMiddleware.js';
+import { authorizeTenantAccess } from './middlewares/tenantAuthMiddleware.js'; // O NOVO MIDDLEWARE
+
+// Importar todas as suas rotas
+import authRoutes from "./routes/auth.js";
 import publicRoutes from "./routes/publicRoutes.js"; // Rotas públicas da landing page
 import paymentRoutes from "./routes/paymentRoutes.js"; // Rotas para processamento de pagamentos
-
-// import { tenantMiddleware } from "./middlewares/tenantMiddleware.js"; // Middleware para identificar tenant
-import { resolveTenantId } from './middlewares/tenantResolver.js';
-
+import protectedRoutes from "./routes/protected.js"; // Exemplo de rotas protegidas genéricas
+import userRoutes from "./routes/userRoutes.js";
+import bookingRoutes from "./routes/bookingRoutes.js";
+import serviceRoutes from "./routes/serviceRoutes.js";
+import vehicleRoutes from "./routes/vehicleRoutes.js";
+import dashboardRoutes from "./routes/dashboardRoutes.js";
+import whatsappRoutes from "./routes/whatsappRoutes.js";
+import emailRoutes from "./routes/emailRoutes.js";
+import emailAutomationRoutes from "./routes/emailAutomationRoutes.js";
+import financialRoutes from "./routes/financialRoutes.js";
+import settingsRoutes from "./routes/settingsRoutes.js";
+import adminSubscriptionRoutes from "./routes/adminSubscriptionRoutes.js";
+import subscriptionRoutes from "./routes/subscriptionRoutes.js";
+import tenantRoutes from "./routes/tenantRoutes.js"; // Rotas de superadmin para gerenciar tenants
 import transactionRoutes from "./routes/finance/transactions.js";
 import categoryRoutes from "./routes/finance/categories.js";
 import methodRoutes from "./routes/finance/methods.js";
@@ -37,40 +39,44 @@ import { PrismaClient } from '@prisma/client';
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Para resolver o __dirname em ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Inicializar Prisma e Stripe
 const prisma = new PrismaClient();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: "2023-10-16", // Mantenha esta versão ou atualize para a mais recente se já testou
+    apiVersion: "2023-10-16",
 });
 
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
 
 // Configurar CORS para permitir origens específicas
 const allowedOrigins = [
-    "http://localhost:8080", // Frontend local
+    "http://localhost:8080",
     "http://192.168.0.20:8080",
-    "http://localhost:3000", // Testes locais
-    "https://saas-estetica-automotiva.vercel.app", // URL do Vercel em produção
+    "http://localhost:3000",
+    "https://saas-estetica-automotiva.vercel.app",
     "https://saas-estetica-automotiva.onrender.com",
+    
+    "http://meusaas.com.br:8080", 
+    "http://admin.meusaas.com.br:8080", 
+    "http://painel.meusaas.com.br:8080", 
+
+
     "http://esteticaas.meusaas.com.br:8080",
-    "http://admin.meusaas.com.br:8080",
-    "http://painel.meusaas.com.br:8080",
-    "http://belezaurbana.meusaas.com.br:8080", // URL do backend (para testes)
-    process.env.FRONTEND_URL, // URL adicional configurável
-].filter(Boolean); // Remove valores undefined
+    "http://belezaurbana.meusaas.com.br:8080",
+    "http://esteticaneon.meusaas.com.br:8080",
+    process.env.FRONTEND_URL,
+].filter(Boolean);
 
 app.use(
     cors({
         origin: function (origin, callback) {
-            // Permite requisições sem origin (mobile apps, Postman, etc.) em desenvolvimento
             if (!origin && process.env.NODE_ENV === "development") {
                 return callback(null, true);
             }
-            if (allowedOrigins.indexOf(origin) !== -1) {
+            // Para testar subdomínios, você pode precisar de uma lógica mais sofisticada aqui
+            // ou adicionar explicitamente os subdomínios em 'allowedOrigins' como você fez
+            if (allowedOrigins.indexOf(origin) !== -1 || (origin && origin.endsWith(`.${process.env.BASE_DOMAIN}:8080`))) {
                 callback(null, true);
             } else {
                 console.error(`CORS BLOCKED: Origin ${origin} is not in allowed list.`);
@@ -81,8 +87,9 @@ app.use(
     })
 );
 
-
+// Middleware para Stripe Webhook (deve vir ANTES de express.json() porque o body é raw)
 app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+    
     const sig = req.headers['stripe-signature'];
     let event;
 
@@ -118,7 +125,6 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
                     return res.status(400).send('Tenant ID not found in metadata.');
                 }
 
-                // Tenta encontrar o tenant existente pelo ID dos metadados
                 const tenant = await prisma.tenant.findUnique({
                     where: { id: tenantIdFromMetadata },
                 });
@@ -127,12 +133,11 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
                     console.log(`Tenant ${tenant.id} encontrado. Atualizando...`);
 
                     let priceId = null;
-                    let subscriptionEndsAtValue = null; // Para armazenar o timestamp do Stripe
+                    let subscriptionEndsAtValue = null;
 
-                    // Se a sessão tem um ID de assinatura, recupere os detalhes completos da assinatura do Stripe
                     if (subscriptionId) {
                         const subscription = await stripe.subscriptions.retrieve(subscriptionId, { expand: ['items.data.price'] });
-                        priceId = subscription.items.data[0]?.price?.id; 
+                        priceId = subscription.items.data[0]?.price?.id;
                         subscriptionEndsAtValue = subscription.current_period_end;
 
                         console.log(`[checkout.session.completed] Subscription retrieved. Price ID: ${priceId}, Current Period End: ${subscriptionEndsAtValue}`);
@@ -156,11 +161,11 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
 
                         if (subscriptionEndsAtValue && typeof subscriptionEndsAtValue === 'number') {
                             subscriptionEndsAtDate = new Date(subscriptionEndsAtValue * 1000);
-                            if (isNaN(subscriptionEndsAtDate.getTime())) { // Verifica se é uma data inválida
+                            if (isNaN(subscriptionEndsAtDate.getTime())) {
                                 console.error(`[checkout.session.completed] Data calculada para subscriptionEndsAt é inválida: ${subscriptionEndsAtValue}. Será null.`);
                                 subscriptionEndsAtDate = null;
-                            } else{
-                              console.log(`[checkout.session.completed] Data de subscriptionEndsAt calculada com sucesso: ${subscriptionEndsAtDate.toISOString()}`);
+                            } else {
+                                console.log(`[checkout.session.completed] Data de subscriptionEndsAt calculada com sucesso: ${subscriptionEndsAtDate.toISOString()}`);
                             }
                         } else {
                             console.warn(`[checkout.session.completed] subscriptionEndsAtValue inválido/ausente: ${subscriptionEndsAtValue}. subscriptionEndsAt será null.`);
@@ -171,10 +176,10 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
                             data: {
                                 stripeSubscriptionId: subscriptionId,
                                 stripeCustomerId: customerId,
-                                subscriptionStatus: 'ACTIVE', // Ou defina um status inicial como PENDING/TRIAL
+                                subscriptionStatus: 'ACTIVE',
                                 planId: ourPlan.id,
-                                subscriptionEndsAt: subscriptionEndsAtDate, // Usando a data tratada
-                                trialEndsAt: null, // Trial finalizado (se aplicável)
+                                subscriptionEndsAt: subscriptionEndsAtDate,
+                                trialEndsAt: null,
                             },
                         });
                         console.log(`Tenant ${tenant.id} atualizado com sucesso para ACTIVE com assinatura ${subscriptionId}!`);
@@ -184,7 +189,7 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
 
                 } else {
                     console.warn(`Tenant com ID ${tenantIdFromMetadata} não encontrado no banco de dados. Este pode ser um erro se o tenant já deveria existir.`);
-                
+
                     return res.status(404).send('Tenant não encontrado para configuração inicial.');
                 }
 
@@ -201,7 +206,6 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
             console.log(`Stripe Customer ID para created event: ${createdSubscription.customer}`);
 
             try {
-                // Tenta encontrar o tenant pelo stripeSubscriptionId OU stripeCustomerId
                 let tenantToUpdate = await prisma.tenant.findFirst({
                     where: { stripeSubscriptionId: createdSubscription.id }
                 });
@@ -216,7 +220,7 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
 
                 if (tenantToUpdate) {
                     let newPlanId = tenantToUpdate.planId;
-                    const newPriceId = createdSubscription.items.data[0]?.price?.id; 
+                    const newPriceId = createdSubscription.items.data[0]?.price?.id;
 
                     if (newPriceId) {
                         const newOurPlan = await prisma.subscriptionPlan.findFirst({
@@ -242,16 +246,15 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
                         console.warn(`[customer.subscription.created] createdSubscription.current_period_end inválido/ausente: ${createdSubscription.current_period_end}. subscriptionEndsAt será null.`);
                     }
 
-                    // ATUALIZA O TENANT COM OS DADOS MAIS COMPLETOS DA ASSINATURA CRIADA
                     await prisma.tenant.update({
                         where: { id: tenantToUpdate.id },
                         data: {
-                            stripeSubscriptionId: createdSubscription.id, // Garante que o ID da assinatura Stripe está correto
-                            stripeCustomerId: createdSubscription.customer, // Garante que o ID do cliente Stripe está correto
+                            stripeSubscriptionId: createdSubscription.id,
+                            stripeCustomerId: createdSubscription.customer,
                             subscriptionStatus: createdSubscription.status.toUpperCase(),
                             planId: newPlanId,
-                            subscriptionEndsAt: subscriptionEndsAtDate, // AGORA SIM, ESSA DEVE SER A DATA CORRETA
-                            trialEndsAt: null // Trial finalizado
+                            subscriptionEndsAt: subscriptionEndsAtDate,
+                            trialEndsAt: null
                         },
                     });
                     console.log(`Assinatura ${createdSubscription.id} criada e tenant ${tenantToUpdate.id} ATUALIZADO com detalhes completos.`);
@@ -306,7 +309,7 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
                         where: { stripeSubscriptionId: updatedSubscription.id },
                         data: {
                             subscriptionStatus: updatedSubscription.status.toUpperCase(),
-                            planId: newPlanId, // Atualiza o plano interno
+                            planId: newPlanId,
                             subscriptionEndsAt: subscriptionEndsAtDate,
                         },
                     });
@@ -377,61 +380,57 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
     res.status(200).json({ received: true });
 });
 
-
-// Middlewares para parsear JSON no corpo da requisição (para todas as outras rotas)
+// Middlewares para parsear JSON no corpo da requisição (para TODAS as outras rotas)
+// Devem vir APÓS o webhook do Stripe, mas ANTES das suas rotas regulares.
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-    
+
 // Configurar pasta de uploads como estática
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
-app.use('/api', resolveTenantId); // Middleware para resolver o tenantId antes de qualquer rota
+// Middleware global para resolver o tenantId da URL
+// Este deve ser executado para TODAS as requisições que podem ser de um tenant específico.
+app.use(resolveTenantId);
 
 
-// Rotas públicas (sem autenticação)
+// Rotas Públicas (não exigem autenticação)
 app.use("/api/public", publicRoutes); // Rotas da landing page, planos, etc.
 app.use("/api/auth", authRoutes); // Usar as rotas de autenticação sob o prefixo /api/auth
+app.use("/api/payments", paymentRoutes); // Rotas de pagamento (algumas podem ser públicas, outras podem ser protegidas mais tarde)
 
-// Middleware para identificar o tenant baseado no subdomain ou header
-// app.use(tenantMiddleware);
 
-// Rotas para pagamentos
-app.use("/api/payments", paymentRoutes);
-
-// Rotas protegidas por tenant
-app.use("/api/protected", protectedRoutes); // Usar as rotas protegidas sob o prefixo /api/protected
-app.use("/api/bookings", bookingRoutes); // Montar rotas de booking (admin e client) sob /api/bookings
-app.use("/api/services", serviceRoutes); // Updated: Now includes both public and admin routes
-app.use("/api/vehicles", vehicleRoutes); // Montar rotas de veículo (admin e client) sob /api/vehicles
+// ROTAS PROTEGIDAS POR AUTENTICAÇÃO E AUTORIZAÇÃO DE TENANT 
+app.use("/api/protected", protect, authorizeTenantAccess, protectedRoutes);
+app.use("/api/bookings", protect, authorizeTenantAccess, bookingRoutes);
+app.use("/api/services", protect, authorizeTenantAccess, serviceRoutes);
+app.use("/api/vehicles", protect, authorizeTenantAccess, vehicleRoutes);
 
 // Rotas protegidas por tenant e restritas a admin
-app.use("/api/admin/users", userRoutes);
-app.use("/api/admin/dashboard", dashboardRoutes);
-app.use("/api/admin/whatsapp", whatsappRoutes);
-app.use("/api/admin/email", emailRoutes);
+// (assumindo que `userRoutes`, `dashboardRoutes`, etc. esperam um TENANT_ADMIN ou SUPER_ADMIN)
+app.use("/api/admin/users", protect, authorizeTenantAccess, userRoutes);
+app.use("/api/admin/dashboard", protect, authorizeTenantAccess, dashboardRoutes);
+app.use("/api/admin/whatsapp", protect, authorizeTenantAccess, whatsappRoutes);
+app.use("/api/admin/email", protect, authorizeTenantAccess, emailRoutes);
+app.use("/api/admin/email-automation", protect, authorizeTenantAccess, emailAutomationRoutes);
+app.use("/api/admin/financial", protect, authorizeTenantAccess, financialRoutes);
+app.use("/api/admin/settings", protect, authorizeTenantAccess, settingsRoutes);
+app.use("/api/admin/subscription-plans", protect, authorizeTenantAccess, adminSubscriptionRoutes);
 
-// Import da nova rota de automação
-import emailAutomationRoutes from "./routes/emailAutomationRoutes.js";
-// import { eventNames } from 'process'; // Esta linha deve ser removida se ainda estiver causando problemas
-// import { sub } from 'date-fns'; // Esta linha não é necessária aqui, a menos que você a use em outro lugar
-app.use("/api/admin/email-automation", emailAutomationRoutes);
-app.use("/api/admin/financial", financialRoutes);
-app.use("/api/admin/settings", settingsRoutes);
-app.use("/api/admin/subscription-plans", adminSubscriptionRoutes);
+// Rotas de finanças (assumindo que são protegidas e isoladas por tenant)
+app.use("/api/finance/transactions", protect, authorizeTenantAccess, transactionRoutes);
+app.use("/api/finance/categories", protect, authorizeTenantAccess, categoryRoutes);
+app.use("/api/finance/methods", protect, authorizeTenantAccess, methodRoutes);
 
-// Rotas de superadmin (gerenciamento do SaaS)
-app.use("/api/superadmin/tenants", tenantRoutes); // Gerenciamento de tenants
-app.use("/api/superadmin/subscriptions", subscriptionRoutes); // Gerenciamento de planos e assinaturas
 
-app.use("/api/finance/transactions", transactionRoutes);
-app.use("/api/finance/categories", categoryRoutes);
-app.use("/api/finance/methods", methodRoutes);
+
+app.use("/api/superadmin/tenants", protect, authorizeTenantAccess, tenantRoutes);
+app.use("/api/superadmin/subscriptions", protect, authorizeTenantAccess, subscriptionRoutes);
+
 
 app.get("/", (req, res) => {
     res.send("Backend is running!");
 });
 
-// Health check para Render
 app.get("/health", (req, res) => {
     res.status(200).json({
         status: "healthy",

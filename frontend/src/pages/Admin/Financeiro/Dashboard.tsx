@@ -11,7 +11,6 @@ import {
   CartesianGrid,
 } from "recharts";
 import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
 import {
   TrendingUp,
   TrendingDown,
@@ -29,6 +28,7 @@ import ModernAdminLayout from "@/components/Admin/ModernAdminLayout";
 import { ModernCard, StatCard } from "@/components/Admin/ModernCard";
 import ModernButton from "@/components/Admin/ModernButton";
 import { getTenantId } from "@/utils/tenantUtils";
+import API from "@/utils/apiService";
 
 const fetchDashboard = async () => {
   try {
@@ -43,8 +43,8 @@ const fetchDashboard = async () => {
       };
     }
 
-    const { data } = await axios.get(
-      `/api/finance/transactions/dashboard?tenantId=${tenantId}`
+    const { data } = await API.get(
+      `/finance/transactions/dashboard?tenantId=${tenantId}`
     );
 
     // Garantir que os dados têm a estrutura esperada

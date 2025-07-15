@@ -1,14 +1,34 @@
 import axios from "axios";
-import { API_BASE_URL } from "../config/environment.ts";
-import { getSubdomain } from './urlService';
+import { getSubdomainFromUrl } from './urlService';
+import { ENV_CONFIG } from '../config/environment';
+
+const getDynamicApiBaseUrl = () => {
+    const subdomain = getSubdomainFromUrl();
+    const backendPort = ENV_CONFIG.BACKEND_PORT;
+    const baseDomain = ENV_CONFIG.BASE_DOMAIN;
+    const protocol = window.location.protocol;
+
+    let apiUrl;
+    if (subdomain && subdomain !== 'www') {
+        apiUrl = `${protocol}//${subdomain}.${baseDomain}:${backendPort}/api`; 
+    } else {
+        console.warn("Subdomínio não detectado na URL do navegador para API. Usando domínio base padrão.");
+        apiUrl = `${protocol}//localhost:${backendPort}/api`; 
+    }
+
+    console.log("DEBUG: API Base URL gerada:", apiUrl);
+    return apiUrl;
+};
 
 const API = axios.create({
-  baseURL: API_BASE_URL, // Assumindo que API_BASE_URL é 'http://localhost:3000/api'
-  withCredentials: true,
-  headers: {
-    'Content-Type': 'application/json',
-  }
+  baseURL: getDynamicApiBaseUrl(),
+  withCredentials: true,
+  headers: {
+    'Content-Type': 'application/json',
+  }
 });
+
+
 
 // Adicionar interceptor para incluir o token JWT nas requisições (exceto login/register)
 API.interceptors.request.use(
@@ -28,7 +48,7 @@ API.interceptors.request.use(
       console.log("Added Authorization header:", config.headers.Authorization);
     }
 
-    const tenantIdFromUrl = getSubdomain();
+    const tenantIdFromUrl = getSubdomainFromUrl();
     const tenantIdFromSession = sessionStorage.getItem("x-tenant-id");
 
     if (tenantIdFromUrl) {
@@ -183,7 +203,7 @@ export const rescheduleMyBooking = async (bookingId, newDate, newTime) => {
   const token = sessionStorage.getItem("token");
   try {
     const response = await API.put(
-      `/api/bookings/client/${bookingId}/reschedule`, // Este parece estar correto como está, pois tem apenas um /api
+      `/bookings/client/${bookingId}/reschedule`, // Este parece estar correto como está, pois tem apenas um /api
       { date: newDate, time: newTime },
     );
     return { data: response.data };

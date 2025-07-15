@@ -1,38 +1,46 @@
-import ENV_CONFIG from '../config/environment';
+import { ENV_CONFIG } from '@/config/environment';
 
-export const getSubdomain = (): string | null => {
-  const hostname = window.location.hostname; // Ex: "esteticaas.meusaas.com.br", "localhost"
+export const getSubdomainFromUrl = (): string | null => {
+    const hostname = window.location.hostname;
+    const baseDomain = ENV_CONFIG.BASE_DOMAIN;
 
-
-  if (hostname === 'localhost') {
-    const urlParams = new URLSearchParams(window.location.search);
-    const devSubdomain = urlParams.get('devSubdomain');
-    if(devSubdomain){
-      return devSubdomain;
+    if (hostname.includes('localhost') || hostname.includes('127.0.0.1')) {
+        
+        const cleanHostname = hostname.split(':')[0];
+  
+        if (cleanHostname.endsWith(`.${baseDomain}`) || cleanHostname.endsWith(`.localhost`)) {
+            const parts = cleanHostname.split('.');
+            
+            if (parts.length > 0 && parts[0] !== 'www' && parts[0] !== 'localhost' && parts[0] !== '127') {
+                return parts[0];
+            }
+        }
+        return null; 
     }
-    // console.log("Dev subdomain detected:", devSubdomain); // Para debug
-    return devSubdomain;
-  }
 
-  const baseDomain = ENV_CONFIG.BASE_DOMAIN;
+    // Lógica para produção (domínio real)
+    if (hostname.includes(baseDomain)) {
+        const cleanHostname = hostname.split(':')[0];
+        const baseDomainRegex = new RegExp(`\\.?${baseDomain.replace(/\./g, '\\.')}$`);
+        const subdomainMatch = cleanHostname.replace(baseDomainRegex, '');
 
-  if (!baseDomain) {
-    console.warn("BASE_DOMAIN não configurado no envirnment.js para detecção de subdomínio.");
-    return null;
-  }
-
-  const parts = hostname.split('.');
-
-
-  if (hostname.endsWith(baseDomain) && parts.length > baseDomain.split('.').length) {
-    const subdomain = parts[0];
-
-    if (subdomain && !['www', 'admin', 'painel'].includes(subdomain)) {
-      // console.log("Subdomain from hostname:", subdomain); // Para debug
-      return subdomain;
+        if (subdomainMatch && subdomainMatch.length > 0 && subdomainMatch !== 'www') {
+           
+            return subdomainMatch.endsWith('.') ? subdomainMatch.slice(0, -1) : subdomainMatch;
+        }
     }
-  }
 
-  // console.log("No valid tenant subdomain found in hostname."); // Para debug
-  return null;
+    return null; // Não foi possível determinar um subdomínio de tenant válido
+};
+
+export const buildTenantLoginUrl = (subdomain: string): string => {
+    const protocol = window.location.protocol;
+    const port = window.location.port ? `:${window.location.port}` : '';
+    const baseDomain = ENV_CONFIG.BASE_DOMAIN;
+
+    if (ENV_CONFIG.IS_PRODUCTION) {
+        return `${protocol}//${subdomain}.${baseDomain}/login`;
+    } else {
+        return `${protocol}//${subdomain}.${baseDomain}${port}/login`;
+    }
 };

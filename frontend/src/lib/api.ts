@@ -66,11 +66,13 @@ interface BookingData {
   notes?: string;
 }
 
-import { API_BASE_URL } from "../config/environment";
+import { ENV_CONFIG } from "../config/environment";
+
+const API_BASE_URL_FOR_THIS_FILE = ENV_CONFIG.API_URL;
 
 // Configuração base do axios
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: API_BASE_URL_FOR_THIS_FILE,
   headers: {
     "Content-Type": "application/json",
   },

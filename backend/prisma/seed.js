@@ -144,7 +144,7 @@ async function main() {
   const premiumAdmin = await prisma.authAccount.create({
     data: {
       email: "admin@premium.com",
-      password: await hashPassword("Senha123"),
+      passwordHash: await hashPassword("Senha123"),
       role: "TENANT_ADMIN",
       tenantId: premiumTenant.id,
       employee: {
@@ -158,7 +158,7 @@ async function main() {
   const premiumFunc = await prisma.authAccount.create({
     data: {
       email: "funcionario@premium.com",
-      password: await hashPassword("Senha123"),
+      passwordHash: await hashPassword("Senha123"),
       role: "EMPLOYEE",
       tenantId: premiumTenant.id,
       employee: {
@@ -174,7 +174,7 @@ async function main() {
   const testeAdmin = await prisma.authAccount.create({
     data: {
       email: "admin@teste.com",
-      password: await hashPassword("Senha123"),
+      passwordHash: await hashPassword("Senha123"),
       role: "TENANT_ADMIN",
       tenantId: testeTenant.id,
       employee: {
@@ -188,7 +188,7 @@ async function main() {
   const testeFunc = await prisma.authAccount.create({
     data: {
       email: "funcionario@teste.com",
-      password: await hashPassword("Senha123"),
+      passwordHash: await hashPassword("Senha123"),
       role: "EMPLOYEE",
       tenantId: testeTenant.id,
       employee: {
@@ -205,7 +205,7 @@ async function main() {
   const cliente1Account = await prisma.authAccount.create({
     data: {
       email: "joao@exemplo.com",
-      password: await hashPassword("Senha123"),
+      passwordHash: await hashPassword("Senha123"),
       role: "CLIENT",
       tenantId: testeTenant.id,
       client: {

@@ -20,6 +20,7 @@ import { ModernCard, StatCard } from "@/components/Admin/ModernCard";
 import ModernButton from "@/components/Admin/ModernButton";
 import ModernTable from "@/components/Admin/ModernTable";
 import { buildImageUrl } from "../../utils/imageUtils.js";
+import API from '../../utils/apiService';
 
 interface Service {
   id: string;
@@ -73,18 +74,18 @@ const ServicesPage = () => {
         throw new Error("Token de autenticação não encontrado");
       }
 
-      const response = await fetch("/api/services/admin", {
+      const response = await API.get("/services/admin", {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
       });
 
-      if (!response.ok) {
+      if (response.status < 200 || response.status >= 300) {
         throw new Error("Erro ao buscar serviços");
       }
 
-      const data = await response.json();
+      const data = await response.data;
       setServices(data);
     } catch (error) {
       console.error("Erro ao buscar serviços:", error);
@@ -104,20 +105,18 @@ const ServicesPage = () => {
         throw new Error("Token de autenticação não encontrado");
       }
 
-      const response = await fetch("/api/services/admin", {
-        method: "POST",
+      const response = await API.post("/api/services/admin", formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
       });
 
-      if (!response.ok) {
+      if (response.status < 200 || response.status >= 300) {
         throw new Error("Erro ao criar serviço");
       }
 
-      const newService = await response.json();
+      const newService = response.data;
       setServices((prev) => [...prev, newService]);
       setShowForm(false);
       resetForm();
@@ -139,20 +138,22 @@ const ServicesPage = () => {
         throw new Error("Token de autenticação não encontrado");
       }
 
-      const response = await fetch(`/api/services/admin/${editingService.id}`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
+      const response = await API.put(
+        `/api/services/admin/${editingService.id}`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
-      if (!response.ok) {
+      if (response.status < 200 || response.status >= 300) {
         throw new Error("Erro ao atualizar serviço");
       }
 
-      const updatedService = await response.json();
+      const updatedService = response.data;
       setServices((prev) =>
         prev.map((s) => (s.id === editingService.id ? updatedService : s))
       );
@@ -177,7 +178,7 @@ const ServicesPage = () => {
         throw new Error("Token de autenticação não encontrado");
       }
 
-      const response = await fetch(`/api/services/admin/${id}`, {
+      const response = await API.get(`/api/services/admin/${id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -185,7 +186,7 @@ const ServicesPage = () => {
         },
       });
 
-      if (!response.ok) {
+      if (response.status < 200 || response.status >= 300) {
         throw new Error("Erro ao deletar serviço");
       }
 
@@ -211,19 +212,17 @@ const ServicesPage = () => {
       const formDataUpload = new FormData();
       formDataUpload.append("image", file);
 
-      const response = await fetch("/api/services/admin/upload", {
-        method: "POST",
+      const response = await API.post("/api/services/admin/upload", formDataUpload, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-        body: formDataUpload,
       });
 
-      if (!response.ok) {
+      if (response.status < 200 || response.status >= 300) {
         throw new Error("Erro ao fazer upload da imagem");
       }
 
-      const data = await response.json();
+      const data = await response.data;
       setFormData((prev) => ({ ...prev, imageSrc: data.imagePath }));
       toast.success("Imagem carregada com sucesso!");
     } catch (error) {

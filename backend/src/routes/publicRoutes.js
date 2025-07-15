@@ -119,7 +119,7 @@ router.post("/signup", async (req, res) => {
       const adminAccount = await tx.authAccount.create({
         data: {
           email: adminEmail,
-          password: hashedPassword,
+          passwordHash: hashedPassword,
           role: "TENANT_ADMIN",
           tenantId: tenant.id,
           employee: {

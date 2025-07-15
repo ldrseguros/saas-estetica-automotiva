@@ -18,12 +18,15 @@ import {
   ArrowDownRight,
   Eye,
   Plus,
+  ClipboardCopy,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import ModernAdminLayout from "@/components/Admin/ModernAdminLayout";
 import { ModernCard, StatCard } from "@/components/Admin/ModernCard";
 import ModernButton from "@/components/Admin/ModernButton";
+import { getSubdomainFromUrl, buildTenantLoginUrl } from "@/utils/urlService";
+import { ENV_CONFIG } from "@/config/environment";
 
 interface DashboardStats {
   bookingsToday: number;
@@ -100,17 +103,25 @@ const TenantDashboard = () => {
     null
   );
 
+  const [clientLoginUrl, setClientLoginUrl] = useState<string | null>(null);
+
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
         setError(null);
 
+        const subdomain = getSubdomainFromUrl();
+        if(subdomain){
+          const url = buildTenantLoginUrl(subdomain);
+          setClientLoginUrl(url);
+        } else{
+          setClientLoginUrl(null);
+        }
+
         // Buscar estatísticas do dashboard
         const statsResponse = await API.get("/admin/dashboard/stats");
         const stats = statsResponse.data;
-
-
 
         // Buscar agendamentos recentes (próximos)
         const now = new Date();
@@ -216,6 +227,43 @@ const TenantDashboard = () => {
 
     fetchDashboardData();
   }, []);
+
+  const copyToClipboard = async (text: string) => {
+  try {
+   
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+      console.log('Link copiado com sucesso!');
+     
+    } else {
+
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea); 
+      textArea.focus();
+      textArea.select(); 
+
+      try {
+        const successful = document.execCommand('copy'); 
+        const msg = successful ? 'successful' : 'unsuccessful';
+        console.log('Cópia via fallback ' + msg);
+        
+      } catch (err) {
+        console.error('Falha na cópia via fallback:', err);
+        
+      } finally {
+        textArea.remove(); 
+      }
+    }
+  } catch (err) {
+    console.error('Falha ao copiar o link (erro geral):', err);
+   
+  }
+};
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -469,6 +517,53 @@ const TenantDashboard = () => {
             </ModernButton>
           </div>
         </motion.div>
+        
+         {clientLoginUrl && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-white rounded-lg shadow-sm border border-gray-200 p-4"
+          >
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex-grow">
+                <label
+                  htmlFor="client-login-url"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Link de Login para Seus Clientes:
+                </label>
+                <div className="relative rounded-md shadow-sm">
+                  <input
+                    type="text"
+                    id="client-login-url"
+                    className="block w-full rounded-md border-gray-300 pr-10 focus:ring-red-500 focus:border-red-500 sm:text-sm p-2 bg-gray-50 text-gray-900"
+                    value={clientLoginUrl}
+                    readOnly
+                  />
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                    <ClipboardCopy
+                      className="h-5 w-5 text-gray-400"
+                      aria-hidden="true"
+                    />
+                  </div>
+                </div>
+                <p className="mt-1 text-xs text-gray-500">
+                  Compartilhe este link com seus clientes para que eles possam
+                  acessar o portal de agendamentos da sua estética.
+                </p>
+              </div>
+              <ModernButton
+                variant="primary"
+                icon={ClipboardCopy}
+                onClick={() => copyToClipboard(clientLoginUrl || '')}
+                className="w-full md:w-auto"
+              >
+                Copiar Link
+              </ModernButton>
+            </div>
+          </motion.div>
+        )}
 
         {/* Subscription Alert */}
         {renderSubscriptionAlert()}

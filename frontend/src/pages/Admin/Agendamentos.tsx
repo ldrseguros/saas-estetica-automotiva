@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import ModernAdminLayout from "../../components/Admin/ModernAdminLayout";
 import CreateBookingModal from "../../components/Admin/CreateBookingModal";
+import API from '../../utils/apiService'
 
 // ====================================
 // 📅 INTERFACES E TIPOS
@@ -331,17 +332,17 @@ const Agendamentos: React.FC = () => {
 
     try {
       const token = sessionStorage.getItem("token");
-      const response = await fetch("/api/bookings/admin", {
+      const response = await API.get("/bookings/admin", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      if (!response.ok) {
+      if (response.status < 200 || response.status >= 300) {
         throw new Error("Erro ao carregar agendamentos");
       }
 
-      const data = await response.json();
+      const data = response.data;
       setBookings(data.bookings || []);
     } catch (err) {
       console.error("Erro ao carregar agendamentos:", err);
@@ -371,14 +372,14 @@ const Agendamentos: React.FC = () => {
 
     try {
       const token = sessionStorage.getItem("token");
-      const response = await fetch(`/api/bookings/${bookingId}/cancel`, {
+      const response = await API.get(`/api/bookings/${bookingId}/cancel`, {
         method: "PATCH",
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      if (!response.ok) {
+      if (response.status < 200 || response.status >= 300) {
         throw new Error("Erro ao cancelar agendamento");
       }
 
@@ -396,14 +397,14 @@ const Agendamentos: React.FC = () => {
 
     try {
       const token = sessionStorage.getItem("token");
-      const response = await fetch(`/api/bookings/${bookingId}/complete`, {
+      const response = await API.get(`/api/bookings/${bookingId}/complete`, {
         method: "PATCH",
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      if (!response.ok) {
+      if (response.status < 200 || response.status >= 300) {
         throw new Error("Erro ao completar agendamento");
       }
 
@@ -429,14 +430,14 @@ const Agendamentos: React.FC = () => {
 
     try {
       const token = sessionStorage.getItem("token");
-      const response = await fetch(`/api/bookings/${deletingBookingId}`, {
+      const response = await API.get(`/api/bookings/${deletingBookingId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      if (!response.ok) {
+      if (response.status < 200 || response.status >= 300) {
         throw new Error("Erro ao deletar agendamento");
       }
 
@@ -454,16 +455,17 @@ const Agendamentos: React.FC = () => {
 
     try {
       const token = sessionStorage.getItem("token");
-      const response = await fetch(`/api/bookings/admin/${editingBooking.id}`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(updatedBooking),
-      });
+      const response = await API.put(`/api/bookings/admin/${editingBooking.id}`,
+        updatedBooking,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
-      if (!response.ok) {
+      if (response.status < 200 || response.status >= 300) {
         throw new Error("Erro ao atualizar agendamento");
       }
 
@@ -488,16 +490,14 @@ const Agendamentos: React.FC = () => {
   }) => {
     try {
       const token = sessionStorage.getItem("token");
-      const response = await fetch("/api/bookings/admin", {
-        method: "POST",
+      const response = await API.post("/api/bookings/admin", newBookingData, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(newBookingData),
       });
 
-      if (!response.ok) {
+      if (response.status < 200 || response.status >= 300) {
         throw new Error("Erro ao criar agendamento");
       }
 

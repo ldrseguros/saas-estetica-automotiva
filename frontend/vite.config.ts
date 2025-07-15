@@ -17,6 +17,7 @@ export default defineConfig(({ mode }) => ({
       },
     },
     allowedHosts: [
+      'esteticaneon.meusaas.com.br',
       'esteticaas.meusaas.com.br',
       'belezaurbana.meusaas.com.br',
       'admin.meusaas.com.br',
@@ -24,6 +25,7 @@ export default defineConfig(({ mode }) => ({
       'meusaas.com.br',
       'localhost', 
       '127.0.0.1'  
+      
     ]
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(

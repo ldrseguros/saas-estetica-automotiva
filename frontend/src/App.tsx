@@ -27,7 +27,7 @@ import Cadastro from "./pages/Cadastro";
 import Checkout from "./pages/Checkout";
 import PublicBooking from "./pages/PublicBooking";
 import DashboardFinanceiro from "./pages/Admin/Financeiro/Dashboard";
-import TransacoesFinanceiras from "./pages/Admin/Financeiro/Transacoes.tsx";
+import TransacoesFinanceiras from "./pages/Admin/Financeiro/Transacoes";
 import CategoriasFinanceiras from "./pages/Admin/Financeiro/Categorias";
 import MetodosPagamento from "./pages/Admin/Financeiro/Metodos";
 

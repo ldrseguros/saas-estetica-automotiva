@@ -22,6 +22,7 @@ import ModernAdminLayout from "@/components/Admin/ModernAdminLayout";
 import { ModernCard, StatCard } from "@/components/Admin/ModernCard";
 import ModernButton from "@/components/Admin/ModernButton";
 import ConfigurationsTab from "@/components/Admin/WhatsApp/ConfigurationsTab";
+import API from '../../utils/apiService';
 
 interface Template {
   id: string;
@@ -77,18 +78,18 @@ const WhatsAppPage: React.FC = () => {
         throw new Error("Token de autenticação não encontrado");
       }
 
-      const response = await fetch("/api/admin/whatsapp/templates", {
+      const response = await API.get("/admin/whatsapp/templates", {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
       });
 
-      if (!response.ok) {
+      if (response.status < 200 || response.status >= 300) {
         throw new Error("Erro ao buscar templates");
       }
 
-      const templatesData = await response.json();
+      const templatesData = await response.data;
       setTemplates(templatesData);
     } catch (error) {
       console.error("Erro ao buscar templates:", error);
@@ -106,18 +107,18 @@ const WhatsAppPage: React.FC = () => {
         throw new Error("Token de autenticação não encontrado");
       }
 
-      const response = await fetch("/api/admin/users", {
+      const response = await API.get("/admin/users", {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
       });
 
-      if (!response.ok) {
+      if (response.status < 200 || response.status >= 300) {
         throw new Error("Erro ao buscar clientes");
       }
 
-      const allUsersResponse = await response.json();
+      const allUsersResponse = await response.data;
       const clientsWithWhatsApp = (allUsersResponse.users || [])
         .filter(
           (user: { role: string; whatsapp?: string }) =>
@@ -173,20 +174,18 @@ const WhatsAppPage: React.FC = () => {
         throw new Error("Token de autenticação não encontrado");
       }
 
-      const response = await fetch("/api/admin/whatsapp/templates", {
-        method: "POST",
+      const response = await API.post("/api/admin/whatsapp/templates", formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
       });
 
-      if (!response.ok) {
+      if (response.status < 200 || response.status >= 300) {
         throw new Error("Erro ao criar template");
       }
 
-      const newTemplate = await response.json();
+      const newTemplate = await response.data;
       setTemplates((prev) => [...prev, newTemplate]);
       setShowTemplateForm(false);
       setFormData({ name: "", message: "", type: "custom" });
@@ -208,27 +207,25 @@ const WhatsAppPage: React.FC = () => {
         throw new Error("Token de autenticação não encontrado");
       }
 
-      const response = await fetch(
+      const response = await API.put(
         `/api/admin/whatsapp/templates/${editingTemplate.id}`,
+        formData,
         {
-          method: "PUT",
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(formData),
         }
       );
 
-      if (!response.ok) {
+      if (response.status < 200 || response.status >= 300) {
         throw new Error("Erro ao atualizar template");
       }
 
-      const updatedTemplate = await response.json();
+      const updatedTemplate = response.data;
       setTemplates((prev) =>
         prev.map((t) => (t.id === editingTemplate.id ? updatedTemplate : t))
       );
-      setEditingTemplate(null);
       setShowTemplateForm(false);
       setFormData({ name: "", message: "", type: "custom" });
       toast.success("Template atualizado com sucesso!");
@@ -247,7 +244,7 @@ const WhatsAppPage: React.FC = () => {
         throw new Error("Token de autenticação não encontrado");
       }
 
-      const response = await fetch(`/api/admin/whatsapp/templates/${id}`, {
+      const response = await API.get(`/api/admin/whatsapp/templates/${id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -255,7 +252,7 @@ const WhatsAppPage: React.FC = () => {
         },
       });
 
-      if (!response.ok) {
+      if (response.status < 200 || response.status >= 300) {
         throw new Error("Erro ao deletar template");
       }
 
@@ -276,20 +273,21 @@ const WhatsAppPage: React.FC = () => {
         throw new Error("Token de autenticação não encontrado");
       }
 
-      const response = await fetch("/api/admin/whatsapp/send", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(sendMessageData),
-      });
+      const response = await API.post(
+        "/api/admin/whatsapp/send",
+        sendMessageData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
-      if (!response.ok) {
+      if (response.status < 200 || response.status >= 300) {
         throw new Error("Erro ao enviar mensagem");
       }
 
-      const result = await response.json();
       setSendMessageData({ clientId: "", message: "" });
       toast.success("Mensagem enviada com sucesso!");
     } catch (error) {
